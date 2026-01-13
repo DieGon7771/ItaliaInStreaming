@@ -22,9 +22,9 @@ import com.lagradost.cloudstream3.utils.AppUtils
 import it.dogior.hadEnough.UltimaUtils.SectionInfo
 
 class Ultima(val plugin: UltimaPlugin) : MainAPI() {
-    override var name = "Ultima"
+    override var name = "SyncStream"
     override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
-    override var lang = "en"
+    override var lang = "it"
     override val hasMainPage = true
     override val hasQuickSearch = false
     private val sm = UltimaStorageManager
