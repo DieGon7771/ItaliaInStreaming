@@ -44,7 +44,7 @@ version = 1
 
 cloudstream {
     description = "Organizza homepage e sincronizza Continue Watching tra dispositivi"
-    authors = listOf("IlTuoNome") // Cambia con il tuo!
+    authors = listOf("RowdyRushya, Phisher98, DieGon") 
     
     /**
      * Status:
@@ -53,12 +53,12 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
      */
-    status = 1 // Imposta a 1 (Ok) quando è stabile
+    status = 3 // Imposta a 1 (Ok) quando è stabile
     
     tvTypes = listOf("All")
     
     requiresResources = true
-    language = "en"
+    language = "it"
     
     // Icona per SyncStream (dovrai crearne una!)
     iconUrl = "https://raw.githubusercontent.com/iltuonome/tuorepo/main/icons/syncstream.png"
