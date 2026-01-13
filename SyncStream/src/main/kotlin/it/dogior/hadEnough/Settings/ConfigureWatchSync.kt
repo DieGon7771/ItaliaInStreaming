@@ -28,7 +28,7 @@ class UltimaConfigureWatchSync(private val plugin: UltimaPlugin) : BottomSheetDi
     private val sm = UltimaStorageManager
     private val deviceData = sm.deviceSyncCreds
     private val res: Resources = plugin.resources ?: throw Exception("Unable to read resources")
-    private val packageName = BuildConfig.LIBRARY_PACKAGE_NAME
+    private val packageName = "it.dogior.hadEnough" // ⬅️ CAMBIATO (era BuildConfig.LIBRARY_PACKAGE_NAME)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -182,6 +182,7 @@ class UltimaConfigureWatchSync(private val plugin: UltimaPlugin) : BottomSheetDi
     }
 
     override fun onDetach() {
+        // ⚠️ ATTENZIONE: Se UltimaSettings non esiste più, commenta queste righe
         val settings = UltimaSettings(plugin)
         settings.show(
             activity?.supportFragmentManager
