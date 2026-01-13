@@ -167,7 +167,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_rowWeight="1"
-                android:text="Ultima Setup Guide"
+                android:text="Setup Guide(in arrivo)"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
