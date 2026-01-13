@@ -17,6 +17,7 @@ include(
 //    "OnlineSerieTV",
     "StreamingCommunity",
     "Stremio",
+    "SyncStream",
     "TV",
 //    "ToonItalia",
     "Torrentio"
