@@ -15,12 +15,12 @@ cloudstream {
     * 2: Slow
     * 3: Beta only
     * */
-    status = 0
+    status = 1
 
     tvTypes = listOf("Movie", "TvSeries", "Cartoon", "Anime", "Documentary")
 
     requiresResources = false
     language = "it"
 
-    iconUrl = "https://onlineserietv.com/wp-content/uploads/2023/01/cropped-tv-1.png"
+    iconUrl = "https://onlineserietv.online/wp-content/uploads/2023/01/cropped-tv-1.png"
 }
