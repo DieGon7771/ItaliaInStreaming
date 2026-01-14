@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 import it.dogior.hadEnough.extractors.MaxStreamExtractor
 import it.dogior.hadEnough.extractors.StreamTapeExtractor
 
-class OnlineSerieTVHybrid : MainAPI() {
+class OnlineSerieTV : MainAPI() {
     override var mainUrl = "https://api.themoviedb.org/3"
     override var name = "OnlineSerieTV"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
