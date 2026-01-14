@@ -29,7 +29,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
 class OnlineSerieTV : MainAPI() {
-    override var mainUrl = "https://onlineserietv.com"
+    override var mainUrl = "https://onlineserietv.online"
     override var name = "OnlineSerieTV"
     override val supportedTypes = setOf(
         TvType.Movie, TvType.TvSeries,
