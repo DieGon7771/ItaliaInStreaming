@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.json.JSONObject
 
 class VixCloudExtractor : ExtractorApi() {
@@ -32,17 +33,69 @@ class VixCloudExtractor : ExtractorApi() {
             "Origin" to "https://vixcloud.co"
         )
 
-        callback.invoke(
+        // ⚡ FUNZIONE CHE FUNZIONA PER TUTTE LE VERSIONI
+        val link = createCompatibleExtractorLink(
+            name = "VixCloud",
+            source = "VixCloud",
+            url = playlistUrl,
+            headers = headers,
+            referer = safeReferer
+        )
+        
+        callback.invoke(link)
+    }
+
+    // ⭐ NUOVA FUNZIONE: Compatibile con tutte le versioni
+    private fun createCompatibleExtractorLink(
+        name: String,
+        source: String,
+        url: String,
+        headers: Map<String, String>,
+        referer: String
+    ): ExtractorLink {
+        return try {
+            // 1. Prima prova: Nuovo costruttore (Prerelease/4.X)
+            // Se questa riga fallisce, va al catch
             ExtractorLink(
-                name = "VixCloud",
-                source = "VixCloud",
-                url = playlistUrl,
+                name = name,
+                source = source,
+                url = url,
                 type = ExtractorLinkType.M3U8,
                 quality = Qualities.P720.value,
                 headers = headers,
-                referer = safeReferer
+                referer = referer
             )
-        )
+        } catch (e: NoSuchMethodError) {
+            // 2. Fallback: API vecchia (Stable/3.X)
+            newExtractorLink(
+                source = source,
+                name = name,
+                url = url,
+                type = ExtractorLinkType.VIDEO,  // Stable non ha M3U8
+                quality = Qualities.P720.value
+            ) {
+                this.headers = headers
+                this.referer = referer
+            }
+        } catch (e: IllegalArgumentException) {
+            // 3. Fallback se M3U8 non esiste
+            val linkType = if (ExtractorLinkType.values().any { it.name == "M3U8" }) {
+                ExtractorLinkType.M3U8
+            } else {
+                ExtractorLinkType.VIDEO
+            }
+            
+            newExtractorLink(
+                source = source,
+                name = name,
+                url = url,
+                type = linkType,
+                quality = Qualities.P720.value
+            ) {
+                this.headers = headers
+                this.referer = referer
+            }
+        }
     }
 
     private suspend fun getPlaylistLink(url: String, referer: String): String {
