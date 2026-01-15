@@ -20,7 +20,7 @@ class VixCloudExtractor : ExtractorApi() {
         "Accept" to "*/*",
         "Connection" to "keep-alive",
         "Cache-Control" to "no-cache",
-        "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
     )
 
     override suspend fun getUrl(
@@ -31,27 +31,42 @@ class VixCloudExtractor : ExtractorApi() {
     ) {
         this.referer = referer
         Log.d(TAG, "REFERER: $referer  URL: $url")
-        val playlistUrl = getPlaylistLink(url)
-        Log.w(TAG, "FINAL URL: $playlistUrl")
+        
+        try {
+            val playlistUrl = getPlaylistLink(url, referer)
+            Log.w(TAG, "FINAL URL: $playlistUrl")
 
-        callback.invoke(
-            newExtractorLink(
-                source = "VixCloud",
-                name = "Streaming Community - VixCloud",
-                url = playlistUrl,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.headers = h
+            // 🔧 DETERMINA TIPO LINK (M3U8 per streaming, VIDEO per download se possibile)
+            val linkType = if (playlistUrl.contains(".m3u8")) {
+                ExtractorLinkType.M3U8
+            } else {
+                ExtractorLinkType.VIDEO
             }
-        )
 
-
+            callback.invoke(
+                newExtractorLink(
+                    source = "VixCloud",
+                    name = "Streaming Community - VixCloud",
+                    url = playlistUrl,
+                    type = linkType
+                ) {
+                    this.headers = h
+                    this.referer = referer ?: ""
+                    // 🔧 IMPORTANTE per download M3U8
+                    this.isM3u8 = playlistUrl.contains(".m3u8")
+                }
+            )
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Errore VixCloudExtractor: ${e.message}", e)
+            // Non bloccare, lascia che VixSrc provi
+        }
     }
 
-    private suspend fun getPlaylistLink(url: String): String {
+    private suspend fun getPlaylistLink(url: String, referer: String?): String {
         Log.d(TAG, "Item url: $url")
 
-        val script = getScript(url)
+        val script = getScript(url, referer)
         val masterPlaylist = script.getJSONObject("masterPlaylist")
         val masterPlaylistParams = masterPlaylist.getJSONObject("params")
         val token = masterPlaylistParams.getString("token")
@@ -75,13 +90,16 @@ class VixCloudExtractor : ExtractorApi() {
         return masterPlaylistUrl
     }
 
-    private suspend fun getScript(url: String): JSONObject {
+    private suspend fun getScript(url: String, referer: String?): JSONObject {
         Log.d(TAG, "Item url: $url")
 
-        val iframe = app.get(url, headers = h, interceptor = CloudflareKiller()).document
+        // 🔧 AGGIUNGI REFERER AGLI HEADERS
+        val headers = h.toMutableMap()
+        referer?.let { headers["Referer"] = it }
+
+        val iframe = app.get(url, headers = headers, interceptor = CloudflareKiller()).document
         Log.d(TAG, iframe.toString())
 
-//        Log.d(TAG, iframe.document.toString())
         val scripts = iframe.select("script")
         val script =
             scripts.find { it.data().contains("masterPlaylist") }!!.data().replace("\n", "\t")
