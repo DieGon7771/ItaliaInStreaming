@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 
@@ -35,17 +36,48 @@ class VixSrcExtractor : ExtractorApi() {
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/133.0",
         )
 
-        callback.invoke(
+        // ⚡ USA LA STESSA FUNZIONE COMPATIBILE
+        val link = createCompatibleExtractorLink(
+            name = "VixSrc",
+            source = "VixSrc",
+            url = playlistUrl,
+            headers = headers,
+            referer = safeReferer
+        )
+        
+        callback.invoke(link)
+    }
+
+    // ⭐ STESSA FUNZIONE COMPATIBILE
+    private fun createCompatibleExtractorLink(
+        name: String,
+        source: String,
+        url: String,
+        headers: Map<String, String>,
+        referer: String
+    ): ExtractorLink {
+        return try {
             ExtractorLink(
-                name = "VixSrc",
-                source = "VixSrc",
-                url = playlistUrl,
+                name = name,
+                source = source,
+                url = url,
                 type = ExtractorLinkType.M3U8,
                 quality = Qualities.P720.value,
                 headers = headers,
-                referer = safeReferer
+                referer = referer
             )
-        )
+        } catch (e: NoSuchMethodError) {
+            newExtractorLink(
+                source = source,
+                name = name,
+                url = url,
+                type = ExtractorLinkType.VIDEO,
+                quality = Qualities.P720.value
+            ) {
+                this.headers = headers
+                this.referer = referer
+            }
+        }
     }
 
     private suspend fun getPlaylistLink(url: String, referer: String): String {
