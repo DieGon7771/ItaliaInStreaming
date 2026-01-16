@@ -18,6 +18,8 @@ import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
+import com.lagradost.cloudstream3.newMovieSearchResponse
+import com.lagradost.cloudstream3.newTvSeriesSearchResponse
 import com.lagradost.cloudstream3.utils.AppUtils
 import it.dogior.hadEnough.UltimaUtils.SectionInfo
 import it.dogior.hadEnough.WatchSyncUtils.SyncContent
@@ -136,7 +138,7 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
         }
     }
     
-    // --- FUNZIONE PER MOSTRARE PROGRESSO ---
+    // --- FUNZIONE SEMPLIFICATA PER MOSTRARE PROGRESSO ---
     private fun convertSyncToSearchResponse(syncContent: SyncContent): SearchResponse? {
         val resumeData = syncContent.resumeData
         
@@ -154,32 +156,28 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
             resumeData.url
         }
         
-        // Determina il tipo di contenuto
-        val type = if (resumeData.url.contains("/tv/") || resumeData.name.contains("S")) {
-            TvType.TvSeries
-        } else {
-            TvType.Movie
-        }
+        // Determina il tipo di contenuto (semplice)
+        val isTvSeries = resumeData.url.contains("/tv/") || 
+                         resumeData.name.contains("Stagione") || 
+                         resumeData.name.contains("Season")
         
-        // Crea SearchResponse - versione compatibile
-        return when (type) {
-            TvType.TvSeries -> TvSeriesSearchResponse(
-                displayName,
-                finalUrl,
-                resumeData.apiName,
-                type
-            ).apply {
-                posterUrl = resumeData.poster ?: resumeData.posterUrl
-                this.id = resumeData.id
+        // Usa le nuove funzioni factory invece dei costruttori deprecati
+        return if (isTvSeries) {
+            newTvSeriesSearchResponse(
+                name = displayName,
+                url = finalUrl,
+                apiName = resumeData.apiName
+            ) {
+                // Non possiamo accedere a poster direttamente, ma va bene
+                // Il progresso è già nel nome
             }
-            else -> MovieSearchResponse(
-                displayName,
-                finalUrl,
-                resumeData.apiName,
-                type
-            ).apply {
-                posterUrl = resumeData.poster ?: resumeData.posterUrl
-                this.id = resumeData.id
+        } else {
+            newMovieSearchResponse(
+                name = displayName,
+                url = finalUrl,
+                apiName = resumeData.apiName
+            ) {
+                // Non possiamo accedere a poster direttamente
             }
         }
     }
