@@ -20,6 +20,8 @@ import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.utils.AppUtils
 import it.dogior.hadEnough.UltimaUtils.SectionInfo
+import it.dogior.hadEnough.WatchSyncUtils.SyncContent
+import it.dogior.hadEnough.WatchSyncUtils.WatchSyncCreds.SyncDevice
 
 class Ultima(val plugin: UltimaPlugin) : MainAPI() {
     override var name = "SyncStream BETA"
@@ -32,6 +34,10 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
 
     private val mapper = jacksonObjectMapper()
     private var sectionNamesList: List<String> = emptyList()
+    
+    // Variabili per tracking
+    private var currentWatchingId: String? = null
+    private var sessionStartTime: Long = 0
 
     private fun loadSections(): List<MainPageData> {
         val tempSectionNames = mutableListOf<String>()
@@ -61,7 +67,6 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
         return if (result.size <= 1) mainPageOf("" to "") else result
     }
 
-
     private fun buildSectionName(section: SectionInfo, names: MutableList<String>): String {
         val name = if (sm.extNameOnHome) {
             "${section.pluginName}: ${section.name}"
@@ -73,7 +78,6 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
         names += name
         return name
     }
-
 
     override val mainPage = loadSections()
 
@@ -100,8 +104,14 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
                 val homeSections = ArrayList<HomePageList>(filteredDevices.size)
 
                 for (device in filteredDevices) {
-                    val syncedContent = device.syncedData ?: continue
-                    homeSections += HomePageList("Continue from: ${device.name}", syncedContent)
+                    val syncedItems = device.getSyncedItems()
+                    if (syncedItems.isEmpty()) continue
+                    
+                    val modifiedContent = syncedItems.mapNotNull { syncContent ->
+                        convertSyncToSearchResponse(syncContent)
+                    }
+                    
+                    homeSections += HomePageList("📱 ${device.name}", modifiedContent)
                 }
 
                 newHomePageResponse(homeSections, false)
@@ -125,7 +135,43 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
             null
         }
     }
-
+    
+    // --- FUNZIONE PER MOSTRARE PROGRESSO ---
+    private fun convertSyncToSearchResponse(syncContent: SyncContent): SearchResponse? {
+        val resumeData = syncContent.resumeData
+        
+        // Aggiungi progresso al nome
+        val progressText = if (syncContent.progressPercent > 0) {
+            " (${syncContent.progressString})"
+        } else ""
+        
+        val displayName = "${resumeData.name}$progressText"
+        
+        // Aggiungi resume time all'URL se c'è progresso
+        val finalUrl = if (syncContent.watchedSeconds > 60 && !syncContent.isCompleted) {
+            addResumeTime(resumeData.url, syncContent.watchedSeconds)
+        } else {
+            resumeData.url
+        }
+        
+        // Crea SearchResponse dal ResumeWatchingResult
+        return MovieSearchResponse(
+            name = displayName,
+            url = finalUrl,
+            apiName = resumeData.apiName,
+            type = TvType.Movie, // O TvType.TvSeries se hai modo di distinguere
+            posterUrl = resumeData.poster,
+            id = resumeData.id
+        )
+    }
+    
+    private fun addResumeTime(url: String, seconds: Int): String {
+        return if (url.contains("?")) {
+            "$url&t=${seconds}s"
+        } else {
+            "$url?t=${seconds}s"
+        }
+    }
 
     override suspend fun search(query: String): List<SearchResponse>? {
         val enabledSections = mainPage
@@ -166,11 +212,32 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
             }
         }
 
-
         return runLimitedParallel(limit = 4, tasks).flatten()
     }
 
     override suspend fun load(url: String): LoadResponse {
+        // SALVA TEMPO GUARDATO DEL CONTENUTO PRECEDENTE
+        currentWatchingId?.let { contentId ->
+            val sessionEnd = System.currentTimeMillis()
+            val watchedMillis = sessionEnd - sessionStartTime
+            val watchedSeconds = (watchedMillis / 1000).toInt()
+            
+            if (watchedSeconds > 60) { // Salva solo se >1 minuto
+                deviceSyncData?.updateWatchedTime(contentId, watchedSeconds, false)
+            }
+            
+            // Reset
+            currentWatchingId = null
+            sessionStartTime = 0
+        }
+        
+        // REGISTRA INIZIO NUOVA VISIONE
+        val contentId = extractContentIdFromUrl(url)
+        if (contentId != null) {
+            currentWatchingId = contentId
+            sessionStartTime = System.currentTimeMillis()
+        }
+
         val enabledPlugins = mainPage
             .filter { !it.name.equals("watch_sync", ignoreCase = true) }
             .mapNotNull {
@@ -194,13 +261,18 @@ class Ultima(val plugin: UltimaPlugin) : MainAPI() {
                     return response
                 }
             } catch (_: Throwable) {
-                // Optional: Log specific provider failure if debugging
                 Log.e("Ultima load", "Failed loading from ${provider.name}")
             }
         }
 
         return newMovieLoadResponse("Welcome to Ultima", "", TvType.Others, "")
     }
-
-
+    
+    private fun extractContentIdFromUrl(url: String): String? {
+        // Estrai ID dall'URL
+        return when {
+            url.contains("?") -> url.substringBefore("?").hashCode().toString()
+            else -> url.hashCode().toString()
+        }
+    }
 }
