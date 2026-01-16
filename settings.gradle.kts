@@ -17,6 +17,7 @@ include(
 //    "OnlineSerieTV",
     "StreamingCommunity",
     "Stremio",
+    "SyncStream.Beta",
     "SyncStream",
     "TV",
 //    "ToonItalia",
