@@ -41,12 +41,11 @@ salute_emoji = "🟢" if data['salute'] >= 70 else "🟡" if data['salute'] >= 4
 lines.append(f"• Salute repository: {salute_emoji}{data['salute']}%")
 lines.append(f"• Plugin funzionanti: {data['funzionanti']}/{data['total']}")
 
-# LINK INSTALLAZIONE - MODIFICA QUI!
-# Sostituisci USERNAME e REPO con i tuoi
-username = "TUO_USERNAME_GITHUB"  # <<< CAMBIA QUESTO!
-repo = "TUO_REPOSITORY"          # <<< CAMBIA QUESTO!
+# LINK INSTALLAZIONE
+#username = "TUO_USERNAME_GITHUB"  
+#repo = "TUO_REPOSITORY"          
 
-install_url = f"https://github.com/{username}/{repo}/blob/builds/README.md"
+install_url = f"https://t.me/c/1978830401/1000"
 lines.append(f"\n📦 INSTALLA: [CLICCA QUI]({install_url})")
 
 # Unisci tutto
