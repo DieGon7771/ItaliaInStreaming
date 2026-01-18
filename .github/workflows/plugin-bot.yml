@@ -1,0 +1,35 @@
+name: Plugin Status Bot
+on:
+  schedule:
+    # Ogni 5 giorni alle 10:00 (Italia)
+    - cron: '0 9 */5 * *'
+  workflow_dispatch:  # Solo avvio manuale da UI GitHub
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: builds  # Legge sempre dal branch builds
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Leggi plugins.json
+      run: python scripts/check_plugins.py
+    
+    - name: Genera messaggio Telegram
+      run: python scripts/telegram_message.py
+    
+    - name: Invia a Telegram
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        REPO_URL: ${{ github.repository }}
+      run: |
+        python scripts/send_telegram.py
