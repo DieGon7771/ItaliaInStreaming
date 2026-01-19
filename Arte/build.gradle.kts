@@ -24,3 +24,14 @@ cloudstream {
 
     iconUrl = "https://static-cdn.arte.tv/replay/favicons/favicon-194x194.png"
 }
+
+android {
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation("com.google.android.material:material:1.13.0")
+}
