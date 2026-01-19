@@ -1,0 +1,369 @@
+[
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/AltaDefinizione.cs3",
+        "status": 1,
+        "version": 25,
+        "name": "AltaDefinizione",
+        "internalName": "AltaDefinizione",
+        "authors": [
+            "doGior",
+            "DieGon"
+        ],
+        "description": "Film e SerieTV da Altadefinizione",
+        "fileSize": 38217,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Documentary"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/AltaDefinizione/altadefinizione_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-9898cb683a267c055d13ffa327764ccc3e8882ca848429daf2a23ca927bef1f8"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/AnimeSaturn.cs3",
+        "status": 1,
+        "version": 2,
+        "name": "AnimeSaturn",
+        "internalName": "AnimeSaturn",
+        "authors": [
+            "DieGon"
+        ],
+        "description": "Anime da AnimeSaturn",
+        "fileSize": 21987,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "AnimeMovie",
+            "Anime",
+            "OVA"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/AnimeSaturn/animesaturn_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-bc721e92d61fb18635fc7907522d908eac0afeeb4b44235245304026f03bfd47"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/AnimeUnity.cs3",
+        "status": 1,
+        "version": 16,
+        "name": "AnimeUnity",
+        "internalName": "AnimeUnity",
+        "authors": [
+            "doGior",
+            "DieGon"
+        ],
+        "description": "Anime da AnimeUnity",
+        "fileSize": 37884,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "AnimeMovie",
+            "Anime",
+            "OVA"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/AnimeUnity/animeunity_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-035afda23796d3b6f958ae751d33a4143d71caccd0380836ba941d9a21306f06"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/AnimeWorld.cs3",
+        "status": 1,
+        "version": 17,
+        "name": "AnimeWorld",
+        "internalName": "AnimeWorld",
+        "authors": [
+            "doGior",
+            "DieGon"
+        ],
+        "description": "Anime da AnimeWorld",
+        "fileSize": 41759,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "AnimeMovie",
+            "Anime",
+            "OVA"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/AnimeWorld/animeworld_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-de24afed9c7da9393486cc430784fb0da00dd16c1d12ab7ff9e49055baf28bf3"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/Arte.cs3",
+        "status": 1,
+        "version": 4,
+        "name": "Arte",
+        "internalName": "Arte",
+        "authors": [
+            "doGior, DieGon"
+        ],
+        "description": "Concerti, documentari, ecc.. in arte.tv",
+        "fileSize": 33925,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "en",
+        "tvTypes": [
+            "Documentary"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/Arte/arte_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-2fcbba63cc9d8c6816ff0859deb00bf46def8b00aaa6cf91f6b86a42861b0194"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/CalcioStreaming.cs3",
+        "status": 1,
+        "version": 15,
+        "name": "CalcioStreaming",
+        "internalName": "CalcioStreaming",
+        "authors": [
+            "doGior",
+            "DieGon"
+        ],
+        "description": "Live streams da CalcioStreaming",
+        "fileSize": 14387,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Live"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/CalcioStreaming/calcio_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-ee09eaed721fea3ad779c7216c23b590c44bb25307cc8ddc156bebbe408b0ee9"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/CB01.cs3",
+        "status": 1,
+        "version": 26,
+        "name": "CB01",
+        "internalName": "CB01",
+        "authors": [
+            "doGior",
+            "Bbshak",
+            "DieGon"
+        ],
+        "description": "Film e SerieTV da CB01",
+        "fileSize": 39963,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Cartoon"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/CB01/cb01_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-00d0fec10648df17cee6c7316980d95fdb12bddb98e7cceb0a6f4d81d75cf617"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/CorsaroNero.cs3",
+        "status": 0,
+        "version": 6,
+        "name": "CorsaroNero",
+        "internalName": "CorsaroNero",
+        "authors": [
+            "doGior"
+        ],
+        "description": "Torrent da Il Corsaro Nero. If something doesn't work the torrent has probably not enough seeds",
+        "fileSize": 31088,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Movie",
+            "Torrent"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/CorsaroNero/corsaronero_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-f77f473f1d7beacffa5762220315469869732a5c363e8991e25eabcccfb54562"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/GuardaSerie.cs3",
+        "status": 1,
+        "version": 5,
+        "name": "GuardaSerie",
+        "internalName": "GuardaSerie",
+        "authors": [
+            "DieGon"
+        ],
+        "description": "SerieTV da GuardaSerie",
+        "fileSize": 21264,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "TvSeries",
+            "Cartoon"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/GuardaSerie/GuardaSerie_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-a4c81d3d2f86a9aea986995700a80feb8a156dcb4dd40296441b51cc1d07fd3c"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/Huhu.cs3",
+        "status": 1,
+        "version": 4,
+        "name": "Huhu",
+        "internalName": "Huhu",
+        "authors": [
+            "DieGon"
+        ],
+        "description": "Canali TV da Huhu",
+        "fileSize": 23989,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "tvTypes": [
+            "Live"
+        ],
+        "iconUrl": "https://huhu.to/favicon.ico",
+        "apiVersion": 1,
+        "fileHash": "sha256-5d8448078dc551a9f7d0fe22f694c74ab6185367abcb2d5635dd6d5799c51678"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/IlGenioDelloStreaming.cs3",
+        "status": 3,
+        "version": 2,
+        "name": "IlGenioDelloStreaming",
+        "internalName": "IlGenioDelloStreaming",
+        "authors": [
+            "DieGon"
+        ],
+        "description": "Film e SerieTV da IlGenioDelloStreaming",
+        "fileSize": 30490,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Cartoon",
+            "Documentary"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/IlGenioDelloStreaming/IlGenioDelloStreaming_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-957225b22d26a97d4c1d24c4afc4d1c86cc98a8b2b137921dcf36ba23e893362"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/SectionOrganizer.cs3",
+        "status": 3,
+        "version": 3,
+        "name": "SectionOrganizer",
+        "internalName": "SectionOrganizer",
+        "authors": [
+            "RowdyRushya, Phisher98, DieGon"
+        ],
+        "description": "Organizza homepage tra vari plugin",
+        "fileSize": 51924,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "tvTypes": [
+            "All"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/SectionOrganizer/SectionOrganizer_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-195c6a6781b99ddb2e7c53fcb1b75a26c9b43d3f882e3979a9d88e549b5127fa"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/StreamingCommunity.cs3",
+        "status": 1,
+        "version": 47,
+        "name": "StreamingCommunity",
+        "internalName": "StreamingCommunity",
+        "authors": [
+            "doGior",
+            "Nanduuu03",
+            "DieGon"
+        ],
+        "description": "Film e SerieTV da StreamingCommunity",
+        "fileSize": 63022,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "TvSeries",
+            "Movie",
+            "Documentary",
+            "Cartoon"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/StreamingCommunity/streamingunity_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-ef6e38c114c67363a3c309f0ca3b93d14b4706df095728e188a4cb7f2990ef0d"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/Stremio.cs3",
+        "status": 3,
+        "version": 10,
+        "name": "Stremio",
+        "internalName": "Stremio",
+        "authors": [
+            "Hexated, phisher98, DieGon"
+        ],
+        "description": "[!!!] Configurazione\n- StremioX: per utilizzare addons di streaming\n- StremioC: per utilizzare addons di catalogo",
+        "fileSize": 122328,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "TvSeries",
+            "Movie"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/Stremio/stremio_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-3abe56e6f6372c0a0314988c32d41f5dfea4297bfaaba42b08bb4d24d94bc549"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/SyncStream.cs3",
+        "status": 3,
+        "version": 7,
+        "name": "SyncStream",
+        "internalName": "SyncStream",
+        "authors": [
+            "anhdaden",
+            "DieGon"
+        ],
+        "description": "Sincronizza Cloudstream tra dispositivi",
+        "fileSize": 46338,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "tvTypes": [
+            "Others"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/SyncStream/SyncStream_icon.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-a19953ab1b3eacb003659443f7253eeb88cafc3d3bce5956fe4383b657a82e60"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/Torrentio.cs3",
+        "status": 1,
+        "version": 5,
+        "name": "Torrentio",
+        "internalName": "Torrentio",
+        "authors": [
+            "doGior"
+        ],
+        "description": "Torrent da Torrentio",
+        "fileSize": 41594,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "language": "it",
+        "tvTypes": [
+            "Movie",
+            "TvSeries",
+            "Torrent",
+            "Documentary"
+        ],
+        "iconUrl": "https://torrentio.strem.fun/images/logo_v1.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-4f8e1e689c47064440bd3c362b85384b210cf829e404b73983806d9e06db3089"
+    },
+    {
+        "url": "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/builds/TV.cs3",
+        "status": 1,
+        "version": 4,
+        "name": "TV",
+        "internalName": "TV",
+        "authors": [
+            "DieGon"
+        ],
+        "description": "TV live da TV github repository",
+        "fileSize": 28570,
+        "repositoryUrl": "https://github.com/DieGon7771/ItaliaInStreaming",
+        "tvTypes": [
+            "Live"
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/doGior/doGiorsHadEnough/refs/heads/master/TV/television.png",
+        "apiVersion": 1,
+        "fileHash": "sha256-9934f7e23659a8e09e3287ab01cf12445b6d703fc0789b041385bfda7f2a208d"
+    }
+]
