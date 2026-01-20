@@ -8,15 +8,13 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // Shitpack repo which contains our tools and dependencies
         maven("https://jitpack.io")
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.6.0")
-        // Cloudstream gradle plugin which makes everything work and builds plugins
-        classpath("com.github.recloudstream:gradle:-SNAPSHOT")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
+        classpath("com.android.tools.build:gradle:8.13.0")  // SUA VERSIONE
+        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")  // SUA VERSIONE
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")  // LUI USA 2.3.0
     }
 }
 
@@ -38,8 +36,7 @@ subprojects {
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/DieGon7771/ItaliaInStreaming")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/doGior/doGiorsHadEnough")
     }
 
     android {
@@ -71,18 +68,20 @@ subprojects {
         val implementation by configurations
         val cloudstream by configurations
         
-        // Stubs for all Cloudstream classes
-        cloudstream("com.lagradost:cloudstream3:pre-release")
+        cloudstream("com.lagradost:cloudstream3:pre-release")  // LUI USA PRE-RELEASE
 
-        // these dependencies can include any of those which are added by the app,
-        // but you dont need to include any of them if you dont need them
-        // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle
+        // COPIA ESATTAMENTE LE SUE DIPENDENZE
         implementation(kotlin("stdlib"))
-        implementation("com.github.Blatzar:NiceHttp:0.4.11") // http library
-        implementation("org.jsoup:jsoup:1.18.1") // html parser
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.16.0")
-        implementation("com.google.code.gson:gson:2.10.1")
+        implementation("com.github.Blatzar:NiceHttp:0.4.16")  // SUA VERSIONE
+        implementation("org.jsoup:jsoup:1.22.1")             // SUA VERSIONE
+        implementation("androidx.annotation:annotation:1.9.1")  // AGGIUNGI
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")  // SUA VERSIONE
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")  // SUA VERSIONE
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")  // AGGIUNGI
+        implementation("org.mozilla:rhino:1.9.0")  // AGGIUNGI
+        implementation("me.xdrop:fuzzywuzzy:1.4.0")  // AGGIUNGI
+        implementation("com.google.code.gson:gson:2.13.2")  // SUA VERSIONE
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")  // AGGIUNGI
     }
 }
 
