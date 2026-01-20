@@ -12,9 +12,9 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.13.0")  // SUA VERSIONE
-        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")  // SUA VERSIONE
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")  // LUI USA 2.3.0
+        classpath("com.android.tools.build:gradle:8.13.0")
+        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
     }
 }
 
@@ -68,20 +68,19 @@ subprojects {
         val implementation by configurations
         val cloudstream by configurations
         
-        cloudstream("com.lagradost:cloudstream3:pre-release")  // LUI USA PRE-RELEASE
+        cloudstream("com.lagradost:cloudstream3:pre-release")
 
-        // COPIA ESATTAMENTE LE SUE DIPENDENZE
         implementation(kotlin("stdlib"))
-        implementation("com.github.Blatzar:NiceHttp:0.4.16")  // SUA VERSIONE
-        implementation("org.jsoup:jsoup:1.22.1")             // SUA VERSIONE
-        implementation("androidx.annotation:annotation:1.9.1")  // AGGIUNGI
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")  // SUA VERSIONE
-        implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")  // SUA VERSIONE
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")  // AGGIUNGI
-        implementation("org.mozilla:rhino:1.9.0")  // AGGIUNGI
-        implementation("me.xdrop:fuzzywuzzy:1.4.0")  // AGGIUNGI
-        implementation("com.google.code.gson:gson:2.13.2")  // SUA VERSIONE
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")  // AGGIUNGI
+        implementation("com.github.Blatzar:NiceHttp:0.4.16")
+        implementation("org.jsoup:jsoup:1.22.1")
+        implementation("androidx.annotation:annotation:1.9.1")
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.20.1")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+        implementation("org.mozilla:rhino:1.9.0")
+        implementation("me.xdrop:fuzzywuzzy:1.4.0")
+        implementation("com.google.code.gson:gson:2.13.2")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     }
 }
 
