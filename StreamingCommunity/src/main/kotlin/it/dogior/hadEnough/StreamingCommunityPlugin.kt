@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class StreamingCommunityPlugin : Plugin() {
 //    private val sharedPref = activity?.getSharedPreferences("StreamingCommunity", Context.MODE_PRIVATE)
+    private var sharedPref: android.content.SharedPreferences? = null
     override fun load(context: Context) {
         sharedPref = context.getSharedPreferences("StreamingCommunity", Context.MODE_PRIVATE)
         val lang = sharedPref?.getString("lang", "it") ?: "it"
