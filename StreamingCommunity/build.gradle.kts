@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 33
+version = 34
 
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
-    description = "Film e SerieTV da StreamingCommunity"
-    authors = listOf("doGior","DieGon")
+    description = "TV Shows and Movies from StreamingCommunity (now StreamingUnity)"
+    authors = listOf("doGior")
 
     /**
     * Status int as the following:
@@ -23,12 +23,12 @@ cloudstream {
         "Cartoon"
     )
 
-
-    requiresResources = false
+    requiresResources = true
     language = "it"
 
     iconUrl = "https://streamingunity.tv/apple-touch-icon.png?v=2"
 }
+
 android {
     buildFeatures {
         buildConfig = true
@@ -37,5 +37,5 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.material:material:1.13.0")
+    implementation("com.google.android.material:material:1.12.0")
 }
