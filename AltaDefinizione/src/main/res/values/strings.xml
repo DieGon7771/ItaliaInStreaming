@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="header_tw">Altadefinizione</string>
-    <string name="label">Versione Sito:</string>
-    <string name="v1">🆕 Versione Nuova</string>
-    <string name="v2">🗓️ Versione Vecchia</string>
+    <string name="header_tw">AltaDefinizione</string>
+    <string name="label">Versione Plugin:</string>
+    <string name="v1">⚙️ AltaDefinizione-V1</string>
+    <string name="v2">⚙️ AltaDefinizione-V2</string>
 </resources>
