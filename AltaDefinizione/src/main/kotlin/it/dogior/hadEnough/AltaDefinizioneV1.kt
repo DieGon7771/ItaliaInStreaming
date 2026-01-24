@@ -9,7 +9,7 @@ import it.dogior.hadEnough.extractors.MySupervideoExtractor
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-class AltaDefinizione : MainAPI() {
+class AltaDefinizioneV1 : MainAPI() {
     override var mainUrl = "https://altadefinizionez.lat"
     override var name = "AltaDefinizione"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Documentary)
