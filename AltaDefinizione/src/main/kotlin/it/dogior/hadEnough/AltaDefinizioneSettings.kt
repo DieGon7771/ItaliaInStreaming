@@ -20,11 +20,14 @@ import com.lagradost.cloudstream3.CommonActivity.showToast
 import androidx.core.content.edit
 
 class AltaDefinizioneSettings(
-    private val plugin: AltaDefinizionePlugin,  // <-- LASCIA COSÌ
+    private val plugin: AltaDefinizionePlugin,  // <-- USA AltaDefinizionePlugin
     private val sharedPref: SharedPreferences?,
 ) : BottomSheetDialogFragment() {
     private var currentVersion: String = sharedPref?.getString("site_version", "v1") ?: "v1"
-    private var currentVersionPosition: Int = sharedPref?.getInt("versionPosition", 0) ?: 0
+    private var currentVersionPosition: Int = when (currentVersion) {
+        "v2" -> 1
+        else -> 0
+    }
 
     private fun View.makeTvCompatible() {
         this.setPadding(
@@ -78,18 +81,22 @@ class AltaDefinizioneSettings(
 
         // Initialize views
         val headerTw: TextView? = view.findViewByName("header_tw")
-        headerTw?.text = "Altadefinizione"  // <-- TESTO FISSO
+        headerTw?.text = getString("header_tw")
         val labelTw: TextView? = view.findViewByName("label")
-        labelTw?.text = "Versione Sito"  // <-- TESTO FISSO
+        labelTw?.text = getString("label")
 
-        val versionDropdown: Spinner? = view.findViewByName("lang_spinner")  // <-- LASCIA lang_spinner
+        // CAMBIA QUI: da lingue a versioni
+        val versionDropdown: Spinner? = view.findViewByName("lang_spinner")
         val versions = arrayOf("v1", "v2")
-        val versionNames = arrayOf("🆕 Versione Nuova", "🗓️ Versione Vecchia")  // <-- NOMI VERSIONI
+        val versionNames = arrayOf(
+            getString("v1") ?: "Versione Nuova",
+            getString("v2") ?: "Versione Vecchia"
+        )
         
         versionDropdown?.adapter = ArrayAdapter(
             requireContext(), 
             android.R.layout.simple_spinner_dropdown_item, 
-            versionNames  // <-- USA versionNames invece di langsMap
+            versionNames
         )
         versionDropdown?.setSelection(currentVersionPosition)
 
@@ -115,8 +122,8 @@ class AltaDefinizioneSettings(
         saveBtn?.setOnClickListener {
             sharedPref?.edit {
                 this.clear()
-                this.putInt("versionPosition", currentVersionPosition)  // <-- versionPosition invece di langPosition
-                this.putString("site_version", currentVersion)  // <-- site_version invece di lang
+                this.putInt("versionPosition", currentVersionPosition)  // <-- CAMBIA
+                this.putString("site_version", currentVersion)  // <-- CAMBIA
             }
             showToast("Salvato. Riavvia l'app per applicare le impostazioni")
             dismiss()
