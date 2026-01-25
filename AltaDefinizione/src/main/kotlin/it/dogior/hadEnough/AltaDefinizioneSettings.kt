@@ -1,6 +1,7 @@
 package it.dogior.hadEnough
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -14,6 +15,7 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
@@ -125,8 +127,39 @@ class AltaDefinizioneSettings(
                 this.putInt("versionPosition", currentVersionPosition) 
                 this.putString("site_version", currentVersion)  
             }
-            showToast("Saved. Restart the app to apply the settings")
-            dismiss()
+            
+            // ESATTAMENTE COME NELL'ESEMPIO - SOLO SI/NO
+            AlertDialog.Builder(requireContext())
+                .setTitle("Save & Reload")
+                .setMessage("Changes have been saved. Do you want to restart the app to apply them?")
+                .setPositiveButton("Yes") { _, _ ->
+                    dismiss()
+                    restartApp()
+                }
+                .setNegativeButton("No") { _, _ ->
+                    showToast("Settings saved. Restart manually to apply.")
+                    dismiss()
+                }
+                .show()
+        }
+    }
+
+    private fun restartApp() {
+        try {
+            val context = requireContext().applicationContext
+            val packageManager = context.packageManager
+            val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+            val componentName = intent?.component
+
+            if (componentName != null) {
+                val restartIntent = Intent.makeRestartActivityTask(componentName)
+                context.startActivity(restartIntent)
+                Runtime.getRuntime().exit(0)
+            } else {
+                showToast("Could not restart app")
+            }
+        } catch (e: Exception) {
+            showToast("Restart error: ${e.message}")
         }
     }
 }
