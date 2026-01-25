@@ -15,6 +15,8 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
+import android.content.Intent
+import androidx.appcompat.app.AlertDialog
 
 class Settings(
     private val plugin: ArtePlugin,
