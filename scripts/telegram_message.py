@@ -1,5 +1,4 @@
 import json
-import os
 
 # Carica i dati
 with open('plugin_data.json', 'r', encoding='utf-8') as f:
@@ -13,13 +12,12 @@ status_names = {
     0: ("🔴", "DISATTIVATI")
 }
 
-# Costruisci il messaggio
 lines = []
 
-# Header - FORMATO PULITO
+# Header
 lines.append("🏆 REPORT STATO REPOSITORY")
 lines.append(f"📅 Generato il: {data['date']}")
-lines.append("")  # Linea vuota
+lines.append("")
 
 # Per ogni status
 for status_code in [1, 3, 2, 0]:
@@ -30,27 +28,25 @@ for status_code in [1, 3, 2, 0]:
         lines.append(f"{emoji} {name}: {len(plugins)}")
         for plugin in plugins:
             lines.append(f"   • {plugin.get('name', 'Sconosciuto')}")
-        lines.append("")  # Spazio tra sezioni
-    # else: RIMUOVI - Non mostrare sezione vuota
+        lines.append("")
 
-# Statistiche - FORMATO PULITO
-# Calcola salute corretta: (Attivi + Beta) / Totale * 100
+# Statistiche
 attivi = len(data['groups'].get('1', []))
 beta = len(data['groups'].get('3', []))
+lenti = len(data['groups'].get('2', []))  # Include i lenti
 total = data['total']
-funzionanti = attivi + beta
+funzionanti = attivi + beta + lenti  # Attivi + Beta + Lenti
 salute_percent = int((funzionanti / total) * 100) if total > 0 else 0
 
 salute_emoji = "🟢" if salute_percent >= 70 else "🟡" if salute_percent >= 40 else "🔴"
 lines.append(f"Salute repository: {salute_emoji}{salute_percent}%")
 lines.append(f"Plugin funzionanti: {funzionanti}/{total}")
-lines.append("")  # Spazio
+lines.append("")
 
-# LINK INSTALLAZIONE
+# Link installazione
 install_url = f"https://t.me/c/1978830401/1000"
 lines.append(f"📦 INSTALLA: [CLICCA QUI]({install_url})")
 
-# Unisci tutto
 message = "\n".join(lines)
 
 # Salva per telegram
