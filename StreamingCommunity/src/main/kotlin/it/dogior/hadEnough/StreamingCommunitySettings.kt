@@ -1,6 +1,7 @@
 package it.dogior.hadEnough
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -14,20 +15,21 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import androidx.core.content.edit
-import android.content.Intent
-import androidx.appcompat.app.AlertDialog
 
-class Settings(
+class StreamingCommunitySettings(
     private val plugin: StreamingCommunityPlugin,
     private val sharedPref: SharedPreferences?,
 ) : BottomSheetDialogFragment() {
-    private var currentLang: String = sharedPref?.getString("lang", "it") ?: "it"
-    private var currentLangPosition: Int = sharedPref?.getInt("langPosition", 0) ?: 0
+    private var currentLang: String = sharedPref?.getString("language", "it") ?: "it"
+    private var currentLangPosition: Int = when (currentLang) {
+        "en" -> 1
+        else -> 0
+    }
 
     private fun View.makeTvCompatible() {
         this.setPadding(
@@ -39,7 +41,6 @@ class Settings(
         this.background = getDrawable("outline")
     }
 
-    // Helper function to get a drawable resource by name
     @SuppressLint("DiscouragedApi")
     @Suppress("SameParameterValue")
     private fun getDrawable(name: String): Drawable? {
@@ -47,7 +48,6 @@ class Settings(
         return id?.let { ResourcesCompat.getDrawable(plugin.resources ?: return null, it, null) }
     }
 
-    // Helper function to get a string resource by name
     @SuppressLint("DiscouragedApi")
     @Suppress("SameParameterValue")
     private fun getString(name: String): String? {
@@ -55,7 +55,6 @@ class Settings(
         return id?.let { plugin.resources?.getString(it) }
     }
 
-    // Generic findView function to find views by name
     @SuppressLint("DiscouragedApi")
     private fun <T : View> View.findViewByName(name: String): T? {
         val id = plugin.resources?.getIdentifier(name, "id", BuildConfig.LIBRARY_PACKAGE_NAME)
@@ -68,9 +67,7 @@ class Settings(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        val layoutId =
-            plugin.resources?.getIdentifier("settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
+        val layoutId = plugin.resources?.getIdentifier("settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
         return layoutId?.let {
             inflater.inflate(plugin.resources?.getLayout(it), container, false)
         }
@@ -84,34 +81,40 @@ class Settings(
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize views
         val headerTw: TextView? = view.findViewByName("header_tw")
-        headerTw?.text = getString("header_tw")
+        headerTw?.text = getString("header_tw") ?: "Streaming Community"
+        
         val labelTw: TextView? = view.findViewByName("label")
-        labelTw?.text = getString("label")
+        labelTw?.text = getString("label") ?: "Language"
 
-        val langsDropdown: Spinner? = view.findViewByName("lang_spinner")
-        val langs = arrayOf("it", "en")
-        val langsMap = langs.map { it to getString(it) }
-        langsDropdown?.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_dropdown_item, langsMap.map { it.second }
+        val langDropdown: Spinner? = view.findViewByName("lang_spinner")
+        val languages = arrayOf("it", "en")
+        val languageNames = arrayOf(
+            getString("it") ?: "Italian",
+            getString("en") ?: "English"
         )
-        langsDropdown?.setSelection(currentLangPosition)
+        
+        langDropdown?.adapter = ArrayAdapter(
+            requireContext(), 
+            android.R.layout.simple_spinner_dropdown_item, 
+            languageNames
+        )
+        langDropdown?.setSelection(currentLangPosition)
 
-        langsDropdown?.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+        langDropdown?.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: AdapterView<*>?,
                 view: View?,
                 position: Int,
                 id: Long
             ) {
-                currentLang = langs[position]
+                currentLang = languages[position]
+                currentLangPosition = position
             }
 
             override fun onNothingSelected(p0: AdapterView<*>?) {
             }
         }
-
 
         val saveBtn: ImageButton? = view.findViewByName("save_btn")
         saveBtn?.makeTvCompatible()
@@ -120,9 +123,11 @@ class Settings(
         saveBtn?.setOnClickListener {
             sharedPref?.edit {
                 this.clear()
-                this.putInt("langPosition", langs.indexOf(currentLang))
-                this.putString("lang", currentLang)
+                this.putInt("language_position", currentLangPosition)
+                this.putString("language", currentLang)
             }
+            
+            
             AlertDialog.Builder(requireContext())
                 .setTitle("Save & Reload")
                 .setMessage("Changes have been saved. Do you want to restart the app to apply them?")
