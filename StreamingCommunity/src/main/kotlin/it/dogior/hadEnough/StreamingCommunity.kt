@@ -34,7 +34,7 @@ import org.json.JSONObject
 
 class StreamingCommunity(
     override var lang: String = "it",
-    private val showLogo: Boolean = true  // logo attivi
+    private val showLogo: Boolean = true
 ) : MainAPI() {
     override var mainUrl = Companion.mainUrl + lang
     override var name = Companion.name
@@ -56,7 +56,12 @@ class StreamingCommunity(
     }
 
     private val tmdbAPI = "https://api.themoviedb.org/3"
-    private val tmdbApiKey = "1865f43a0549ca50d341dd9ab8b29f49" //temporanea
+    private val tmdbApiKey = BuildConfig.TMDB_API
+    
+    private val tmdbHeaders = mapOf(
+        "Authorization" to "Bearer $tmdbApiKey",
+        "Accept" to "application/json"
+    )
 
     private val sectionNamesListIT = mainPageOf(
         "$mainUrl/browse/top10" to "Top 10 di oggi",
@@ -206,6 +211,7 @@ class StreamingCommunity(
         }
     }
 
+    
     private suspend fun fetchTmdbLogoUrl(
         type: TvType,
         tmdbId: Int?,
@@ -216,13 +222,17 @@ class StreamingCommunity(
         return try {
             val appLang = appLangCode?.substringBefore("-")?.lowercase()
             val url = if (type == TvType.Movie) {
-                "$tmdbAPI/movie/$tmdbId/images?api_key=$tmdbApiKey"
+                "$tmdbAPI/movie/$tmdbId/images"
             } else {
-                "$tmdbAPI/tv/$tmdbId/images?api_key=$tmdbApiKey"
+                "$tmdbAPI/tv/$tmdbId/images"
             }
             
-            val response = app.get(url)
-            if (!response.isSuccessful) return null
+            
+            val response = app.get(url, headers = tmdbHeaders)
+            if (!response.isSuccessful) {
+                Log.d(TAG, "TMDB API error: ${response.code} - ${response.message}")
+                return null
+            }
             
             val jsonText = response.body?.string() ?: return null
             val json = JSONObject(jsonText)
@@ -277,6 +287,7 @@ class StreamingCommunity(
             
             if (logos.length() > 0) logoUrlAt(0) else null
         } catch (e: Exception) {
+            Log.d(TAG, "Error fetching TMDB logo: ${e.message}")
             null
         }
     }
