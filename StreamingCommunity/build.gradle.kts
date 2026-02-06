@@ -35,6 +35,12 @@ android {
         buildConfig = true
         viewBinding = true
     }
+    defaultConfig {
+        val properties = Properties()
+        properties.load(project.rootProject.file("secrets.properties").inputStream())
+        android.buildFeatures.buildConfig = true
+        buildConfigField("String", "TMDB_API", "\"${properties.getProperty("TMDB_API")}\"")
+    }
 }
 
 dependencies {
