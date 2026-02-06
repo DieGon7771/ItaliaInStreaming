@@ -19,8 +19,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import androidx.core.content.edit
-import android.content.Intent
-import androidx.appcompat.app.AlertDialog
 
 class Settings(
     private val plugin: StreamingCommunityPlugin,
@@ -120,42 +118,11 @@ class Settings(
         saveBtn?.setOnClickListener {
             sharedPref?.edit {
                 this.clear()
-                this.putInt("language_position", currentLangPosition)
-                this.putString("language", currentLang)
+                this.putInt("langPosition", langs.indexOf(currentLang))
+                this.putString("lang", currentLang)
             }
-            
-            
-            AlertDialog.Builder(requireContext())
-                .setTitle("Save & Reload")
-                .setMessage("Changes have been saved. Do you want to restart the app to apply them?")
-                .setPositiveButton("Yes") { _, _ ->
-                    dismiss()
-                    restartApp()
-                }
-                .setNegativeButton("No") { _, _ ->
-                    showToast("Settings saved. Restart manually to apply.")
-                    dismiss()
-                }
-                .show()
-        }
-    }
-
-    private fun restartApp() {
-        try {
-            val context = requireContext().applicationContext
-            val packageManager = context.packageManager
-            val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-            val componentName = intent?.component
-
-            if (componentName != null) {
-                val restartIntent = Intent.makeRestartActivityTask(componentName)
-                context.startActivity(restartIntent)
-                Runtime.getRuntime().exit(0)
-            } else {
-                showToast("Could not restart app")
-            }
-        } catch (e: Exception) {
-            showToast("Restart error: ${e.message}")
+            showToast("Saved. Restart the app to apply the settings")
+            dismiss()
         }
     }
 }
