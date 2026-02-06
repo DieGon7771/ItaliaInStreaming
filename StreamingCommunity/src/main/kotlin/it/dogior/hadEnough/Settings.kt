@@ -19,6 +19,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import androidx.core.content.edit
+import android.content.Intent
+import androidx.appcompat.app.AlertDialog
 
 class Settings(
     private val plugin: StreamingCommunityPlugin,
