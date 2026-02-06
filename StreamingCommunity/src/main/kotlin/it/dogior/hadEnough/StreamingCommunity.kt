@@ -230,7 +230,7 @@ class StreamingCommunity(
             
             val response = app.get(url, headers = tmdbHeaders)
             if (!response.isSuccessful) {
-                Log.d(TAG, "TMDB API error: ${response.code} - ${response.message}")
+                Log.d(TAG, "TMDB API error: ${response.code}")
                 return null
             }
             
