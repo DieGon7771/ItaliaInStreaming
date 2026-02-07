@@ -8,7 +8,12 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
+        maven("https://jitpack.io") {
+            credentials {
+                username = project.findProperty("gpr.user") as? String ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") as? String ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 
     dependencies {
@@ -22,7 +27,12 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
+        maven("https://jitpack.io") {
+            credentials {
+                username = project.findProperty("gpr.user") as? String ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") as? String ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
 
