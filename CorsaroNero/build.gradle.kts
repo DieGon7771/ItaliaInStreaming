@@ -17,7 +17,7 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
      * */
-    status = 2
+    status = 1
 
     tvTypes = listOf("Movie", "Torrent")
 
