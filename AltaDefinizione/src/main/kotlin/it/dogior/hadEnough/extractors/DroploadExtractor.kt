@@ -5,13 +5,14 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.getAndUnpack
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
 class DroploadExtractor : ExtractorApi() {
     override var name = "Dropload"
-    override var mainUrl = "https://dropload.pro"
+    override var mainUrl = "https://dropload.tv"
     override val requiresReferer = false
 
     override suspend fun getUrl(
@@ -20,66 +21,61 @@ class DroploadExtractor : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        try {
-            val headers = mapOf(
-                "User-Agent" to "Mozilla/5.0",
-                "Referer" to referer ?: "https://altadefinizionez.sbs/"
-            )
+        Log.i("DroploadExtractor", "🔎 Trying to extract: $url")
 
+        val headers = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept" to "*/*",
+            "Connection" to "keep-alive"
+        )
+
+        try {
             val response = app.get(url, headers = headers)
-            val body = response.text
-            
-            // Cerca pattern comuni per video
-            val patterns = listOf(
-                """file\s*:\s*["']([^"']+\.m3u8[^"']*)["']""",
-                """src\s*:\s*["']([^"']+\.m3u8[^"']*)["']""",
-                """hls\s*:\s*["']([^"']+\.m3u8[^"']*)["']""",
-                """(https?://[^"\s]+\.m3u8[^\s"]*)"""
-            )
-            
-            for (pattern in patterns) {
-                val match = Regex(pattern).find(body)
-                if (match != null) {
-                    var videoUrl = match.groupValues[1]
-                    
-                    // Decodifica URL se necessario
-                    videoUrl = videoUrl.replace("&amp;", "&")
-                    
-                    if (!videoUrl.startsWith("http")) {
-                        videoUrl = if (videoUrl.startsWith("//")) {
-                            "https:$videoUrl"
-                        } else {
-                            "https://$videoUrl"
-                        }
-                    }
-                    
-                    // Verifica se è un master playlist M3U8
-                    if (videoUrl.contains(".m3u8")) {
-                        M3u8Helper.generateM3u8(
-                            name,
-                            videoUrl,
-                            referer = referer ?: url,
-                            quality = Qualities.Unknown.value
-                        ).forEach(callback)
-                        return
-                    } else {
-                        // Se non è M3U8, prova come link diretto
-                        callback.invoke(
-                            newExtractorLink(
-                                source = name,
-                                name = "Dropload",
-                                url = videoUrl,
-                                referer = referer ?: "",
-                                quality = Qualities.Unknown.value,
-                                type = ExtractorLinkType.VIDEO
-                            )
-                        )
-                        return
-                    }
-                }
+            val body = response.body.string()
+            Log.i("DroploadExtractor", "✅ Page loaded, body length: ${body.length}")
+
+            val evalRegex = Regex("""eval\(function\(p,a,c,k,e,(?:r|d).*?\n""")
+            val evalBlock = evalRegex.find(body)?.value ?: run {
+                Log.e("DroploadExtractor", "❌ No eval() block found.")
+                return
             }
+
+            var unpacked = evalBlock
+            var videoUrl: String? = null
+
+            for (i in 1..5) {
+                Log.i("DroploadExtractor", "▶ Unpacking pass $i...")
+                unpacked = getAndUnpack(unpacked)
+                Log.i("DroploadExtractor", "✅ Unpacked pass $i, size: ${unpacked.length}")
+                Log.d("DroploadExtractor", "Content (pass $i): ${unpacked.take(400)}...")
+
+                // Cerca il file JWPlayer
+                videoUrl = Regex("""file\s*:\s*"([^"]+\.m3u8[^"]*)"""")
+                    .find(unpacked)?.groupValues?.get(1)
+
+                if (!videoUrl.isNullOrEmpty()) break
+            }
+
+            if (videoUrl.isNullOrEmpty()) {
+                Log.e("DroploadExtractor", "❌ Failed to extract video URL after 5 passes.")
+                return
+            }
+
+            Log.i("DroploadExtractor", "✅ Extracted video URL: $videoUrl")
+
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = "Dropload",
+                    url = videoUrl,
+                    type = ExtractorLinkType.M3U8
+                ){
+                    this.referer = referer ?: ""
+                    quality = Qualities.Unknown.value
+                }
+            )
         } catch (e: Exception) {
-            // Ignora errore
+            Log.e("DroploadExtractor", "❌ Error during extraction: ${e.message}")
         }
     }
 }
