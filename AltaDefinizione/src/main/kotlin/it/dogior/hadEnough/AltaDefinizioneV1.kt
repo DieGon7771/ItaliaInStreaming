@@ -8,7 +8,6 @@ import it.dogior.hadEnough.extractors.DroploadExtractor
 import it.dogior.hadEnough.extractors.MySupervideoExtractor
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import kotlinx.coroutines.delay
 
 class AltaDefinizioneV1 : MainAPI() {
     override var mainUrl = "https://altadefinizionez.skin"
@@ -17,18 +16,7 @@ class AltaDefinizioneV1 : MainAPI() {
     override var lang = "it"
     override val hasMainPage = true
 
-    private suspend fun getWithTimeout(url: String, timeout: Long = 120000): Document {
-        var lastException: Exception? = null
-        for (attempt in 1..3) {
-            try {
-                if (attempt > 1) delay(2000L * attempt)
-                return app.get(url, timeout = (timeout / 1000).toInt()).document
-            } catch (e: Exception) {
-                lastException = e
-            }
-        }
-        throw lastException ?: Exception("Timeout dopo 3 tentativi")
-    }
+    private val timeout = 60
 
     override val mainPage = mainPageOf(
         "$mainUrl/cinema/" to "Al Cinema",
@@ -51,14 +39,13 @@ class AltaDefinizioneV1 : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page == 1) request.data else "${request.data}page/$page/"
-        val doc = getWithTimeout(url)
+        val doc = app.get(url, timeout = timeout).document
         
         val items = doc.select("#dle-content > .col").mapNotNull {
             it.toSearchResponse()
         }
         
-        val pagination = doc.select("div.pagin > a").last()?.text()?.toIntOrNull()
-        val hasNext = page < (pagination ?: 0) || doc.select("a[rel=next]").isNotEmpty()
+        val hasNext = doc.select("a[rel=next]").isNotEmpty()
         
         return newHomePageResponse(
             HomePageList(request.name, items),
@@ -68,7 +55,6 @@ class AltaDefinizioneV1 : MainAPI() {
 
     private fun Element.toSearchResponse(): MovieSearchResponse? {
         val titleElement = this.selectFirst(".movie-title a") ?: return null
-            
         val title = titleElement.text().trim()
         if (title.isBlank()) return null
         
@@ -83,14 +69,7 @@ class AltaDefinizioneV1 : MainAPI() {
         
         val isSeries = this.selectFirst(".label.episode") != null
         
-        val fullTitle = if (isSeries) {
-            val episode = this.selectFirst(".label.episode")?.text()
-            if (episode != null) "$title ($episode)" else title
-        } else {
-            title
-        }
-        
-        return newMovieSearchResponse(fullTitle, href) {
+        return newMovieSearchResponse(title, href) {
             this.posterUrl = fixUrlNull(poster)
             this.score = Score.from(rating, 10)
         }
@@ -98,56 +77,36 @@ class AltaDefinizioneV1 : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchUrl = "$mainUrl/?do=search&subaction=search&story=$query"
-        val doc = getWithTimeout(searchUrl)
-        
-        return doc.select("#dle-content > .col").mapNotNull {
-            it.toSearchResponse()
-        }
+        val doc = app.get(searchUrl, timeout = timeout).document
+        return doc.select("#dle-content > .col").mapNotNull { it.toSearchResponse() }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val doc = getWithTimeout(url)
+        val doc = app.get(url, timeout = timeout).document
         
-        val content = doc.selectFirst("#dle-content") 
-            ?: doc.selectFirst("main")
-            ?: doc.selectFirst(".container")
-            ?: return null
+        val content = doc.selectFirst("#dle-content, main, .container") ?: return null
         
-        val title = doc.selectFirst("h1, .movie_entry-title, .movie-title")?.text() 
-            ?: "Sconosciuto"
+        val title = doc.selectFirst("h1, .movie_entry-title, .movie-title")?.text() ?: "Sconosciuto"
         
         val posterImg = content.selectFirst("img.layer-image.lazy, img[data-src]")
         val poster = posterImg?.attr("data-src") ?: posterImg?.attr("src")
         
         val plot = doc.selectFirst(".movie_entry-plot, #sfull, .plot, .description, .synopsis")?.text()
         
-        val rating = content.selectFirst(".label.rate, .rateIMDB, .imdb-rate, .rating")?.text()
-            ?.substringAfter("IMDb: ")?.substringBefore(" ") ?: ""
-        
         val detailsContainer = content.selectFirst(".movie_entry-details, .details, .info, #details")
         val details = detailsContainer?.select("li") ?: emptyList()
         
-        val durationString = doc.selectFirst(".meta.movie_entry-info .meta-list")?.let { metaList ->
-            metaList.select("span").find { span -> 
-                span.text().contains("min") 
-            }?.text()?.trim()
-        }
+        val duration = doc.selectFirst(".meta.movie_entry-info .meta-list span:contains(min)")?.text()
+            ?.substringBefore(" min")?.trim()?.toIntOrNull()
         
-        val duration = durationString?.let {
-            it.substringBefore(" min").trim().toIntOrNull()
-        }
-        
-        val year = details.find { it.text().contains("Anno:", ignoreCase = true) }
+        val year = details.find { it.text().contains("Anno:", true) }
             ?.text()?.substringAfter("Anno:")?.trim()?.toIntOrNull()
         
-        val genres = details.find { it.text().contains("Genere:", ignoreCase = true) }
+        val genres = details.find { it.text().contains("Genere:", true) }
             ?.select("a")?.map { it.text() } ?: emptyList()
         
-        val actors = details.find { it.text().contains("Cast:", ignoreCase = true) }
-            ?.select("a")?.map { ActorData(Actor(it.text())) } ?: emptyList()
-        
         val isSeries = url.contains("/serie-tv/") || 
-                      doc.select(".series-select, .dropdown.seasons, .dropdown.episodes, .dropdown.mirrors").isNotEmpty()
+                      doc.select(".dropdown.seasons, .dropdown.episodes").isNotEmpty()
         
         return if (isSeries) {
             val episodes = getEpisodes(doc)
@@ -156,8 +115,7 @@ class AltaDefinizioneV1 : MainAPI() {
                 this.plot = plot
                 this.tags = genres
                 this.year = year
-                this.actors = actors
-                addScore(rating)
+                addScore("")
             }
         } else {
             val mirrors = extractMovieMirrors(doc)
@@ -167,8 +125,7 @@ class AltaDefinizioneV1 : MainAPI() {
                 this.tags = genres
                 this.year = year
                 this.duration = duration
-                this.actors = actors
-                addScore(rating)
+                addScore("")
             }
         }
     }
@@ -176,46 +133,15 @@ class AltaDefinizioneV1 : MainAPI() {
     private suspend fun extractMovieMirrors(doc: Document): List<String> {
         val mirrors = mutableListOf<String>()
         
-        doc.select("iframe[src*='mostraguarda.stream']").forEach { iframe ->
-            val src = iframe.attr("src")
-            if (src.isNotBlank()) {
-                mirrors.add(fixUrl(src))
-            }
+        doc.select("iframe[src*='mostraguarda']").forEach {
+            val src = it.attr("src")
+            if (src.isNotBlank()) mirrors.add(fixUrl(src))
         }
         
         if (mirrors.isEmpty()) {
-            doc.select("iframe[src*='mostraguarda'], iframe[src*='player'], iframe[src*='stream']").forEach { iframe ->
-                val src = iframe.attr("src")
-                if (src.isNotBlank() && !src.contains("youtube")) {
-                    mirrors.add(fixUrl(src))
-                }
-            }
-        }
-        
-        if (mirrors.isEmpty()) {
-            doc.select("a.buttona_stream[href]").forEach { btn ->
-                val href = btn.attr("href")
-                if (href.isNotBlank() && !href.contains("javascript:")) {
-                    mirrors.add(fixUrl(href))
-                }
-            }
-        }
-        
-        if (mirrors.isEmpty()) {
-            doc.select(".player-embed iframe, #player1 iframe, .player iframe").forEach { iframe ->
-                val src = iframe.attr("src")
-                if (src.isNotBlank()) {
-                    mirrors.add(fixUrl(src))
-                }
-            }
-        }
-        
-        if (mirrors.isEmpty()) {
-            doc.select("script[src*='mostraguarda.stream/ddl'], script[src*='/ddl/']").forEach { script ->
-                val src = script.attr("src")
-                if (src.isNotBlank()) {
-                    mirrors.add(fixUrl(src))
-                }
+            doc.select("a.buttona_stream[href]").forEach {
+                val href = it.attr("href")
+                if (href.isNotBlank()) mirrors.add(fixUrl(href))
             }
         }
         
@@ -224,80 +150,21 @@ class AltaDefinizioneV1 : MainAPI() {
 
     private fun getEpisodes(doc: Document): List<Episode> {
         val episodes = mutableListOf<Episode>()
-        val seriesPoster = doc.selectFirst("img.layer-image.lazy, img[data-src]")?.attr("data-src") ?: 
-                       doc.selectFirst("img.layer-image.lazy, img[data-src]")?.attr("src")
+        val seriesPoster = doc.selectFirst("img.layer-image.lazy, img[data-src]")?.attr("data-src")
         
-        val seasonItems = doc.select("div.dropdown.seasons .dropdown-menu span[data-season]")
-        
-        val seasons = if (seasonItems.isNotEmpty()) {
-            seasonItems.map { it.attr("data-season").toIntOrNull() ?: 1 }.distinct().sorted()
-        } else {
-            listOf(1)
-        }
-        
-        seasons.forEach { seasonNum ->
-            val episodeContainer = doc.selectFirst("div.dropdown.episodes[data-season=\"$seasonNum\"]")
-            
-            if (episodeContainer != null) {
-                val episodeItems = episodeContainer.select("span[data-episode]")
-                
-                episodeItems.forEach { episodeItem ->
-                    val episodeData = episodeItem.attr("data-episode")
-                    val parts = episodeData.split("-")
-                    val episodeNum = parts.getOrNull(1)?.toIntOrNull() ?: 1
-                    val episodeName = episodeItem.text().trim()
-                    
-                    val mirrorContainer = doc.selectFirst("div.dropdown.mirrors[data-season=\"$seasonNum\"][data-episode=\"$episodeData\"]")
-                    
-                    val mirrors = if (mirrorContainer != null) {
-                        mirrorContainer.select("span[data-link]").mapNotNull { 
-                            val link = it.attr("data-link")
-                            if (link.isNotBlank()) link else null
-                        }.distinct()
-                    } else {
-                        val episodePattern = "${seasonNum}x${episodeNum}"
-                        doc.select(".down-episode").find { container ->
-                            container.text().contains(episodePattern)
-                        }?.select("a[href]")?.mapNotNull { 
-                            val link = it.attr("href")
-                            if (link.isNotBlank()) link else null
-                        } ?: emptyList()
+        doc.select("div.dropdown.mirrors span[data-link]").forEach { mirror ->
+            val link = mirror.attr("data-link")
+            if (link.isNotBlank()) {
+                episodes.add(
+                    newEpisode(link) {
+                        this.name = "Episodio"
+                        this.posterUrl = fixUrlNull(seriesPoster)
                     }
-                    
-                    if (mirrors.isNotEmpty()) {
-                        episodes.add(
-                            newEpisode(mirrors) {
-                                this.season = seasonNum
-                                this.episode = episodeNum
-                                this.name = episodeName
-                                this.description = "Stagione $seasonNum • $episodeName"
-                                this.posterUrl = fixUrlNull(seriesPoster)
-                            }
-                        )
-                    }
-                }
-            } else {
-                val allMirrors = doc.select("div.dropdown.mirrors[data-season=\"$seasonNum\"] span[data-link]")
-                    .mapNotNull { it.attr("data-link").takeIf { link -> link.isNotBlank() } }
-                    .distinct()
-                
-                if (allMirrors.isNotEmpty()) {
-                    allMirrors.forEachIndexed { index, link ->
-                        episodes.add(
-                            newEpisode(listOf(link)) {
-                                this.season = seasonNum
-                                this.episode = index + 1
-                                this.name = "Episodio ${index + 1}"
-                                this.description = "Stagione $seasonNum, Episodio ${index + 1}"
-                                this.posterUrl = fixUrlNull(seriesPoster)
-                            }
-                        )
-                    }
-                }
+                )
             }
         }
         
-        return episodes
+        return episodes.distinctBy { it.data }
     }
 
     override suspend fun loadLinks(
@@ -307,37 +174,27 @@ class AltaDefinizioneV1 : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val links = parseJson<List<String>>(data)
-        
-        if (links.isEmpty()) {
-            return false
-        }
-        
-        var found = false
+        if (links.isEmpty()) return false
         
         links.forEach { link ->
             when {
-                link.contains("mostraguarda.stream") -> {
+                link.contains("mostraguarda") -> {
                     loadExtractor(link, mainUrl, subtitleCallback, callback)
-                    found = true
                 }
                 link.contains("dropload.pro") -> {
                     DroploadExtractor().getUrl(link, mainUrl, subtitleCallback, callback)
-                    found = true
                 }
                 link.contains("supervideo.cc") -> {
                     MySupervideoExtractor().getUrl(link, mainUrl, subtitleCallback, callback)
-                    found = true
                 }
                 else -> {
                     try {
                         loadExtractor(link, mainUrl, subtitleCallback, callback)
-                        found = true
-                    } catch (e: Exception) {
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         }
         
-        return found
+        return true
     }
 }
