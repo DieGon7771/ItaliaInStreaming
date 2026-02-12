@@ -16,7 +16,7 @@ class AltaDefinizioneV1 : MainAPI() {
     override var lang = "it"
     override val hasMainPage = true
 
-    private val timeout = 60
+    private val timeout = 60L
 
     override val mainPage = mainPageOf(
         "$mainUrl/cinema/" to "Al Cinema",
