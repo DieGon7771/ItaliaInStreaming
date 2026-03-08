@@ -28,7 +28,7 @@ lenti = len(status_groups[2])
 disattivati = len(status_groups[0])
 funzionanti = attivi + beta + lenti  # MODIFICATO: aggiungi lenti
 
-# DEBUG
+# LOG
 print(f"🟢 Attivi: {attivi}")
 print(f"🔵 Beta: {beta}")
 print(f"🟡 Lenti: {lenti}")
