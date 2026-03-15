@@ -94,7 +94,7 @@ class UltimaSettings(val plugin: UltimaPlugin) : BottomSheetDialogFragment() {
         guideIcon.setImageDrawable(getDrawable("ic_eye"))
         guideIcon.makeTvCompatible()
         guideIcon.setOnClickListener {
-            val url = "https://github.com/DieGon7771/ItaliaInStreaming/blob/master/README_SectionOrganizer.md"
+            val url = "https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_SectionOrganizer.md"
             startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
