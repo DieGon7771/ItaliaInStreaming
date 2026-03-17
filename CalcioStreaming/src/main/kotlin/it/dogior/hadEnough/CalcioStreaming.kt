@@ -16,6 +16,7 @@ class CalcioStreaming : MainAPI() {
     override val hasMainPage = true
     override val hasChromecastSupport = true
     override val supportedTypes = setOf(TvType.Live)
+    override var sequentialMainPage = true
     val cfKiller = CloudflareKiller()
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -32,7 +33,8 @@ class CalcioStreaming : MainAPI() {
             val shows = it.select("div.owl-carousel > .slider-tile-inner > .box-16x9").map {
                 val href = it.selectFirst("a")!!.attr("href")
                 val name = ""
-                val posterUrl = fixUrl(it.selectFirst("a > img")!!.attr("src"))
+                val posterUrl = fixUrl(it.selectFirst("img.tile-image")!!.attr("src"))
+                    .replace("//uploads", "/uploads")
                 newLiveSearchResponse(name, href, TvType.Live) {
                     this.posterUrl = posterUrl
                 }
@@ -58,20 +60,15 @@ class CalcioStreaming : MainAPI() {
         val description = infoBlock.select("div.info-span > span").toList().joinToString(" - ")
         return newLiveStreamLoadResponse(name = title, url = url, dataUrl = url) {
             this.posterUrl = fixUrl(posterUrl)
+                .replace("//uploads", "/uploads")
             this.plot = description
         }
     }
 
     private fun getStreamUrl(document: Document): String? {
-        val scripts = document.body().select("script")
-        val obfuscatedScript = scripts.findLast { it.data().contains("eval(") }
-        val url = obfuscatedScript?.let {
-            val data = getAndUnpack(it.data())
-//            Log.d("CalcioStreaming", data)
-            val sourceRegex = "(?<=src=\")([^\"]+)".toRegex()
-            val source = sourceRegex.find(data)?.value ?: return null
-            source
-        } ?: return null
+        val script = document.body().select("script[type=\"module\"]").first()?.data() ?: return null
+        val sourceRegex = "(?<=src ?= ?\")([^\"]+)".toRegex()
+        val url = sourceRegex.find(script)?.value
 
         return url
     }
@@ -82,7 +79,9 @@ class CalcioStreaming : MainAPI() {
 
         val doc = app.get(url).document
         val link = doc.selectFirst("iframe")?.attr("src") ?: return null
-        val newPage = app.get(fixUrl(link), referer = ref).document
+        val newPage = app.get(fixUrl(link), referer = ref, headers = mapOf(
+            "Sec-Fetch-Dest" to "iframe"
+        )).document
         val streamUrl = getStreamUrl(newPage)
         return if (newPage.select("script").size >= 6 && !streamUrl.isNullOrEmpty()) {
             streamUrl to fixUrl(link)
