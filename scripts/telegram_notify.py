@@ -4,8 +4,8 @@ import sys
 import json
 import requests
 
-def send_telegram_message(bot_token, chat_id, message, parse_mode='HTML'):
-    """Invia un messaggio a Telegram"""
+def send_telegram_message(bot_token, chat_id, message, topic_id=None, parse_mode='HTML'):
+    """Invia messaggio a Telegram, con supporto per topic"""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         'chat_id': chat_id,
@@ -13,6 +13,10 @@ def send_telegram_message(bot_token, chat_id, message, parse_mode='HTML'):
         'parse_mode': parse_mode,
         'disable_web_page_preview': True
     }
+    
+    # Aggiunge l'ID del topic se specificato (per i thread di Telegram)
+    if topic_id:
+        payload['message_thread_id'] = topic_id
     
     try:
         response = requests.post(url, json=payload, timeout=10)
@@ -23,7 +27,7 @@ def send_telegram_message(bot_token, chat_id, message, parse_mode='HTML'):
         return False
 
 def format_commit_message(event_data):
-    """Formatta il messaggio per i commit"""
+    """Formatta il messaggio per i commit su GitHub"""
     commits = event_data.get('commits', [])
     commits_count = len(commits)
     repo_name = event_data['repository']['full_name']
@@ -42,7 +46,7 @@ def format_commit_message(event_data):
 <a href="{compare_url}">{message_text}</a>"""
 
 def format_issue_message(event_data):
-    """Formatta il messaggio per le issue"""
+    """Formatta il messaggio per le issue aperte su GitHub"""
     issue = event_data.get('issue', {})
     repo_name = event_data['repository']['full_name']
     issue_title = issue.get('title', 'Nessun titolo')
@@ -50,7 +54,6 @@ def format_issue_message(event_data):
     issue_url = issue.get('html_url', '')
     author = issue.get('user', {}).get('login', 'Sconosciuto')
     
-    # Tronca il corpo della issue a 500 caratteri
     if len(issue_body) > 500:
         issue_body = issue_body[:500] + '...'
     
@@ -65,7 +68,7 @@ def format_issue_message(event_data):
 🔗 <a href="{issue_url}">Vedi su GitHub</a>"""
 
 def main():
-    # Legge il payload di GitHub dall'ambiente
+    # Legge il payload dell'evento GitHub
     github_event_path = os.environ.get('GITHUB_EVENT_PATH')
     if not github_event_path:
         print("GITHUB_EVENT_PATH non trovato", file=sys.stderr)
@@ -78,32 +81,27 @@ def main():
         print(f"Errore lettura evento: {e}", file=sys.stderr)
         sys.exit(1)
     
-    # Determina il tipo di evento
     event_name = os.environ.get('GITHUB_EVENT_NAME')
     
+    # Configurazione Telegram (topic_id = ID del topic dal link)
     bot_token = os.environ.get('TELEGRAM_TOKEN')
     chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+    topic_id = 2101
     
     if not bot_token or not chat_id:
         print("TELEGRAM_TOKEN o TELEGRAM_CHAT_ID non impostati", file=sys.stderr)
         sys.exit(1)
     
-    # Costruisce il messaggio in base al tipo di evento
+    # Seleziona il formato in base al tipo di evento
     if event_name == 'push':
         message = format_commit_message(event_data)
-    elif event_name == 'issues':
-        # Invia solo quando l'issue viene aperta
-        if event_data.get('action') == 'opened':
-            message = format_issue_message(event_data)
-        else:
-            print("Evento issue non gestito", file=sys.stderr)
-            sys.exit(0)
+    elif event_name == 'issues' and event_data.get('action') == 'opened':
+        message = format_issue_message(event_data)
     else:
-        print(f"Evento non supportato: {event_name}", file=sys.stderr)
-        sys.exit(0)
+        sys.exit(0)  # Ignora altri eventi
     
     # Invia il messaggio
-    success = send_telegram_message(bot_token, chat_id, message)
+    success = send_telegram_message(bot_token, chat_id, message, topic_id)
     sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
