@@ -3,8 +3,8 @@ package it.dogior.hadEnough
 import it.dogior.hadEnough.UltimaUtils.ExtensionInfo
 import it.dogior.hadEnough.UltimaUtils.SectionInfo
 import com.lagradost.cloudstream3.APIHolder.allProviders
-import com.lagradost.cloudstream3.AcraApplication.Companion.getKey
-import com.lagradost.cloudstream3.AcraApplication.Companion.setKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 
 object UltimaStorageManager {
     var extNameOnHome: Boolean
