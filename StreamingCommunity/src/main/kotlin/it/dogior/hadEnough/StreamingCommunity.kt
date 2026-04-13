@@ -30,8 +30,13 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import org.jsoup.parser.Parser
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class StreamingCommunity(
     override var lang: String = "it",
@@ -45,6 +50,7 @@ class StreamingCommunity(
 
     companion object {
         private var inertiaVersion = ""
+        private var decodedXsrfToken = ""
         private val headers = mapOf(
             "Cookie" to "",
             "X-Inertia" to true.toString(),
@@ -65,6 +71,65 @@ class StreamingCommunity(
     )
 
     override val mainPage = mainPageOf("home" to "Home")
+
+    private data class SliderFetchRequestSlider(
+        val name: String,
+        val genre: String?
+    )
+
+    private data class SliderFetchRequestBody(
+        val sliders: List<SliderFetchRequestSlider>
+    )
+
+    private val sliderFetchRequestBody = SliderFetchRequestBody(
+        sliders = listOf(
+            SliderFetchRequestSlider(name = "top10", genre = null),
+            SliderFetchRequestSlider(name = "trending", genre = null),
+            SliderFetchRequestSlider(name = "latest", genre = null),
+            SliderFetchRequestSlider(name = "upcoming", genre = null),
+            SliderFetchRequestSlider(name = "genre", genre = "Animation"),
+            SliderFetchRequestSlider(name = "genre", genre = "Adventure"),
+            SliderFetchRequestSlider(name = "genre", genre = "Action"),
+            SliderFetchRequestSlider(name = "genre", genre = "Comedy"),
+            SliderFetchRequestSlider(name = "genre", genre = "Crime"),
+            SliderFetchRequestSlider(name = "genre", genre = "Documentary"),
+            SliderFetchRequestSlider(name = "genre", genre = "Drama"),
+            SliderFetchRequestSlider(name = "genre", genre = "Family"),
+            SliderFetchRequestSlider(name = "genre", genre = "Science Fiction"),
+            SliderFetchRequestSlider(name = "genre", genre = "Fantasy"),
+            SliderFetchRequestSlider(name = "genre", genre = "Horror"),
+            SliderFetchRequestSlider(name = "genre", genre = "Reality"),
+            SliderFetchRequestSlider(name = "genre", genre = "Romance"),
+            SliderFetchRequestSlider(name = "genre", genre = "Thriller")
+        )
+    )
+
+    private fun SliderFetchRequestBody.toRequestBody(): RequestBody {
+        return this.toJson().toRequestBody("application/json;charset=utf-8".toMediaType())
+    }
+
+    private suspend fun fetchSliderSectionsInBatches(): List<HomePageList> {
+        val maxSlidersPerRequest = 6
+        val allSections = mutableListOf<HomePageList>()
+
+        sliderFetchRequestBody.sliders
+            .chunked(maxSlidersPerRequest)
+            .forEachIndexed { index, sliderBatch ->
+                val response = app.post(
+                    "${Companion.mainUrl}api/sliders/fetch?lang=$lang",
+                    requestBody = SliderFetchRequestBody(sliderBatch).toRequestBody(),
+                    headers = getSliderFetchHeaders()
+                )
+
+                val payload = response.body.string()
+                Log.d(TAG, "Slider fetch batch=${index + 1} status=${response.code} size=${sliderBatch.size}")
+                Log.d(TAG, "Slider fetch batch=${index + 1} preview=${payload.take(500)}")
+
+                allSections += parseSliderFetchSections(payload)
+            }
+
+        return allSections
+    }
 
     private fun isHtmlPayload(payload: String): Boolean {
         val trimmed = payload.trimStart()
@@ -156,8 +221,23 @@ class StreamingCommunity(
 
     private suspend fun setupHeaders() {
         val response = app.get("$mainUrl/archive")
-        val cookies = response.cookies
-        headers["Cookie"] = cookies.map { it.key + "=" + it.value }.joinToString(separator = "; ")
+        val cookieJar = linkedMapOf<String, String>()
+        response.cookies.forEach { cookieJar[it.key] = it.value }
+
+        val csrfResponse = app.get(
+            "${Companion.mainUrl}sanctum/csrf-cookie",
+            headers = mapOf(
+                "Referer" to "$mainUrl/",
+                "X-Requested-With" to "XMLHttpRequest"
+            )
+        )
+        csrfResponse.cookies.forEach { cookieJar[it.key] = it.value }
+
+        headers["Cookie"] = cookieJar.entries.joinToString("; ") { "${it.key}=${it.value}" }
+        decodedXsrfToken = cookieJar["XSRF-TOKEN"]
+            ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+            ?: ""
+
         val page = response.document
         val inertiaPageObject = page.select("#app").attr("data-page")
         inertiaVersion = inertiaPageObject
@@ -170,8 +250,10 @@ class StreamingCommunity(
         return mapOf(
             "Cookie" to (headers["Cookie"] ?: ""),
             "X-Requested-With" to "XMLHttpRequest",
+            "X-XSRF-TOKEN" to decodedXsrfToken,
             "Referer" to "$mainUrl/",
             "Accept" to "application/json, text/plain, */*",
+            "Content-Type" to "application/json",
             "Origin" to Companion.mainUrl.removeSuffix("/")
         )
     }
@@ -200,28 +282,16 @@ class StreamingCommunity(
             return newHomePageResponse(emptyList(), hasNext = false)
         }
 
-        val homePayload = app.get("$mainUrl/").body.string()
-        val homepageSections = parseHomeSections(homePayload)
-
         if (headers["Cookie"].isNullOrEmpty()) {
             setupHeaders()
         }
 
-        val lazyResponse = app.post(
-            "${Companion.mainUrl}api/sliders/fetch",
-            data = mapOf("lang" to lang),
-            headers = getSliderFetchHeaders()
-        )
-        val lazyPayload = lazyResponse.body.string()
-        Log.d(TAG, "Slider fetch status=${lazyResponse.code}")
-        Log.d(TAG, "Slider fetch preview=${lazyPayload.take(500)}")
-
-        val lazySections = parseSliderFetchSections(lazyPayload)
+        val lazySections = fetchSliderSectionsInBatches()
         if (lazySections.isEmpty()) {
             Log.d(TAG, "Lazy slider fetch returned no sections")
         }
 
-        return newHomePageResponse(homepageSections + lazySections, hasNext = false)
+        return newHomePageResponse(lazySections, hasNext = false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
