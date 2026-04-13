@@ -2,15 +2,16 @@ package it.dogior.hadEnough.extractors
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -29,7 +30,7 @@ class MixDropExtractor : ExtractorApi() {
         private const val TAG = "MixDropExtractor"
         private const val TIMEOUT_SECONDS = 30L
         
-        private fun getApplicationContext(): android.content.Context? {
+        private fun getApplicationContext(): Context? {
             return try {
                 val activityThreadClass = Class.forName("android.app.ActivityThread")
                 val currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread")
@@ -42,21 +43,12 @@ class MixDropExtractor : ExtractorApi() {
             }
         }
         
-        private val IGNORED_EXTENSIONS = listOf(
-            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico",
-            ".css", ".woff", ".woff2", ".ttf", ".eot",
-            ".js", ".json", ".xml", ".txt"
-        )
-        
-        private val VIDEO_KEYWORDS = listOf(
-            ".mp4", ".m3u8", ".ts", ".mkv", ".webm",
-            "video", "stream", "delivery", "v2/", "playlist"
-        )
-        
         private fun isVideoUrl(url: String): Boolean {
             val lowerUrl = url.lowercase()
-            if (IGNORED_EXTENSIONS.any { lowerUrl.contains(it) }) return false
-            return VIDEO_KEYWORDS.any { lowerUrl.contains(it) }
+            return lowerUrl.contains(".mp4") || 
+                   lowerUrl.contains(".m3u8") || 
+                   lowerUrl.contains("delivery") || 
+                   lowerUrl.contains("v2/hls")
         }
     }
 
@@ -66,11 +58,14 @@ class MixDropExtractor : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val videoId = url.substringAfterLast("/").trim()
-        val embedUrl = "https://mixdrop.top/e/$videoId"
+        val embedUrl = if (url.contains("/e/")) url else {
+            val id = url.substringAfterLast("/").trim()
+            url.replaceAfterLast("/", "e/$id")
+        }
         
+        Log.d(TAG, "Sniffing su dominio: $embedUrl")
         val videoUrl = extractWithWebView(embedUrl)
-        
+
         if (videoUrl != null) {
             callback.invoke(
                 newExtractorLink(
@@ -92,6 +87,7 @@ class MixDropExtractor : ExtractorApi() {
         return suspendCancellableCoroutine { continuation ->
             val latch = CountDownLatch(1)
             var extractedUrl: String? = null
+            var found = false
             
             Handler(Looper.getMainLooper()).post {
                 try {
@@ -103,16 +99,16 @@ class MixDropExtractor : ExtractorApi() {
                     @SuppressLint("SetJavaScriptEnabled")
                     val webView = WebView(context)
                     
+                    webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                    
                     webView.settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
-                        blockNetworkImage = true
+                        databaseEnabled = true
                         javaScriptCanOpenWindowsAutomatically = true
                         mediaPlaybackRequiresUserGesture = false
                         userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
                     }
-                    
-                    var found = false
                     
                     webView.webViewClient = object : WebViewClient() {
                         override fun shouldInterceptRequest(
@@ -124,6 +120,7 @@ class MixDropExtractor : ExtractorApi() {
                             if (!found && isVideoUrl(requestUrl)) {
                                 found = true
                                 extractedUrl = requestUrl
+                                Log.i(TAG, "!!! TARGET ACQUIRED !!! -> $requestUrl")
                                 
                                 Handler(Looper.getMainLooper()).post {
                                     webView.stopLoading()
@@ -131,28 +128,37 @@ class MixDropExtractor : ExtractorApi() {
                                     latch.countDown()
                                     continuation.resume(requestUrl)
                                 }
-                                return null
+                                return WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
                             }
                             
                             return super.shouldInterceptRequest(view, request)
-                        }
-                        
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            
-                            view?.evaluateJavascript("""
-                                (function() {
-                                    document.querySelectorAll('video').forEach(v => { v.muted = true; v.play(); });
-                                    document.querySelector('[class*="play"]')?.click();
-                                })();
-                            """.trimIndent(), null)
                         }
                     }
                     
                     webView.loadUrl(embedUrl)
                     
+                    val handler = Handler(Looper.getMainLooper())
+                    val clicker = object : Runnable {
+                        var count = 0
+                        override fun run() {
+                            if (!found && count < 6) {
+                                webView.evaluateJavascript("""
+                                    (function() {
+                                        var v = document.querySelector('video');
+                                        if(v) { v.muted = true; v.play(); }
+                                        document.querySelector('.vjs-big-play-button, #vplayer, .play-button')?.click();
+                                    })();
+                                """.trimIndent(), null)
+                                count++
+                                handler.postDelayed(this, 2500)
+                            }
+                        }
+                    }
+                    handler.postDelayed(clicker, 3000)
+                    
                     Handler(Looper.getMainLooper()).postDelayed({
                         if (!found) {
+                            Log.w(TAG, "Timeout: Nessun link rilevato su questo dominio")
                             webView.stopLoading()
                             webView.destroy()
                             latch.countDown()
