@@ -21,7 +21,7 @@ cloudstream {
 
     tvTypes = listOf("Movie", "Torrent")
 
-    requiresResources = true
+    requiresResources = false
     language = "it"
 
     iconUrl = "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/CorsaroNero/corsaronero_icon.png"
