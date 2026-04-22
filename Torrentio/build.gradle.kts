@@ -21,7 +21,7 @@ cloudstream {
 
     tvTypes = listOf("Movie", "TvSeries", "Torrent", "Documentary")
 
-    requiresResources = true
+    requiresResources = false
     language = "it"
 
     iconUrl = "https://torrentio.strem.fun/images/logo_v1.png"
