@@ -14,7 +14,6 @@ class AnimeWorldPlugin : Plugin() {
         val isSplit = sharedPref?.getBoolean("isSplit", false) ?: false
         val dubEnabled = sharedPref?.getBoolean("dubEnabled", false) ?: false
         val subEnabled = sharedPref?.getBoolean("subEnabled", false) ?: false
-        // All providers should be added in this manner. Please don't edit the providers list directly.
         if (isSplit) {
             if (dubEnabled) {
                 registerMainAPI(AnimeWorldDub(isSplit))

@@ -76,7 +76,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         private suspend fun request(url: String): NiceResponse {
             if (!headers.contains("Cookie")) {
                 headers["Cookie"] = getSecurityCookie()
-//                Log.d("AnimeWorld:Cookie", "Cookie: ${headers["Cookie"]}")
             }
             val r = app.get(url, headers = headers)
             return r
@@ -85,7 +84,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         private suspend fun getSecurityCookie(): String {
             val r = app.get(mainUrl)
             val cookie = r.headers["set-cookie"]!!.substringBefore(";")
-//            Log.d("AnimeWorld:getSecurityCookie", "Cookie: $cookie")
             return cookie
         }
     }
@@ -131,16 +129,13 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         }
 
         val document = pageData.document
-//        Log.d("AnimeWorld:MainPage", "Document: $document")
         val list = ArrayList<AnimeSearchResponse>()
         var hasNextPage = false
         if (request.name.contains("Top")) {
             val items = document.select("div.row  .content")
-//            Log.d("AnimeWorld:MainPage", "Items: ${items[0]}")
             items.map { list.add(it.toSearchResult(true)) }
         } else {
             val items = document.select("div.film-list > .item")
-//            Log.d("AnimeWorld:MainPage", "Items: ${items[0]}")
             items.map { list.add(it.toSearchResult(false)) }
 
             val pagingWrapper = document.select("#paging-form").firstOrNull()
@@ -162,20 +157,17 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
     }
 
     private fun Element.toSearchResult(isTopPage: Boolean): AnimeSearchResponse {
-        // Extension function for parsing href.
         fun String.parseHref(): String {
             val parts = this.split('.').toMutableList()
             parts[1] = parts[1].substringBeforeLast('/')
             return parts.joinToString(".")
         }
 
-        // Determine anchor and throw an error if not found.
         val anchor = this.selectFirst(if (isTopPage) "a" else "a.name")
             ?: throw ErrorLoadingException("Error parsing the page")
 
         val url = fixUrl(anchor.attr("href").parseHref())
 
-        // Simplify title and otherTitle selection.
         val titleText = if (isTopPage) {
             this.select("div.info > div.main > a").text()
         } else {
@@ -186,13 +178,11 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         val otherTitle = if (currentExtension == CurrentExtension.DUB) anchor.attr("data-jtitle")
                 .replace(" (ITA)", "") else titleText
 
-        // Use when for `poster` selection.
         val poster = when {
             isTopPage -> anchor.select("img").attr("src")
             else -> this.select("a.poster img").attr("src")
         }
 
-        // Select typeElement based on `isTopPage`.
         val typeElement = this.select(if (isTopPage) "div.type" else "div.status")
 
         val dub = typeElement.select(".dub").isNotEmpty()
@@ -202,7 +192,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
             else -> TvType.Anime
         }
 
-        // Construct and return AnimeSearchResponse.
         return newAnimeSearchResponse(title, url, type) {
             addDubStatus(dub)
             this.otherName = otherTitle
@@ -276,8 +265,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val actualUrl = url.replace(Regex("""www\.animeworld\..."""), mainUrl.toHttpUrl().host)
         val document = request(actualUrl).document
-//        Log.d("AnimeWorld:load", "Url: actualUrl")
-
 
         val widget = document.select("div.widget.info")
         val title = widget.select(".info .title").text().removeSuffix(" (ITA)")
@@ -334,8 +321,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         val comingSoon = episodes.isEmpty()
         val nextAiringDate = document.select("#next-episode").attr("data-calendar-date")
         val nextAiringTime = document.select("#next-episode").attr("data-calendar-time")
-//        Log.d("AnimeWorld:load", "NextAiring: $nextAiringDate $nextAiringTime")
-
         val nextAiringUnix = try {
             SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault())
                 .parse(nextAiringDate + "T" + nextAiringTime)?.time?.div(1000)
@@ -374,7 +359,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-//        Log.d("AnimeWorld:loadLinks", "DATA : $data")
         val d = data.substringAfter("$mainUrl/")
         val epNumber = d.split("¿")[0].toInt()
         val pageUrl = d.split("¿")[1]
@@ -406,7 +390,6 @@ open class AnimeWorldCore(isSplit: Boolean = false) : MainAPI() {
 
             } else if (it.target.contains("listeamed.net")) {
                 loadExtractor(it.grabber, null, subtitleCallback, callback)
-//                VidguardExtractor().getUrl(it.grabber, null, subtitleCallback, callback)
             } else {
                 null
             }

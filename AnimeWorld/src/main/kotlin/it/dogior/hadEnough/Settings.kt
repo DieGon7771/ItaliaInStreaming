@@ -15,8 +15,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.CommonActivity.showToast
-import android.content.Intent
-import androidx.appcompat.app.AlertDialog
 
 class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment() {
     private val sharedPref = plugin.sharedPref
@@ -26,7 +24,6 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
         this.background = getDrawable("outline")
     }
 
-    // Helper function to get a drawable resource by name
     @SuppressLint("DiscouragedApi")
     @Suppress("SameParameterValue")
     private fun getDrawable(name: String): Drawable? {
@@ -34,7 +31,6 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
         return id?.let { ResourcesCompat.getDrawable(plugin.resources ?: return null, it, null) }
     }
 
-    // Helper function to get a string resource by name
     @SuppressLint("DiscouragedApi")
     @Suppress("SameParameterValue")
     private fun getString(name: String): String? {
@@ -42,7 +38,6 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
         return id?.let { plugin.resources?.getString(it) }
     }
 
-    // Generic findView function to find views by name
     @SuppressLint("DiscouragedApi")
     private fun <T : View> View.findViewByName(name: String): T? {
         val id = plugin.resources?.getIdentifier(name, "id", BuildConfig.LIBRARY_PACKAGE_NAME)
@@ -55,7 +50,6 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
         val layoutId =
             plugin.resources?.getIdentifier("settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
         return layoutId?.let {
@@ -71,7 +65,6 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize views
         val headerTw: TextView? = view.findViewByName("header_tw")
         headerTw?.text = getString("header_tw")
 
@@ -114,37 +107,9 @@ class Settings(private val plugin: AnimeWorldPlugin) : BottomSheetDialogFragment
                 this?.putBoolean("subEnabled", subSwitch?.isChecked ?: false)
                 this?.apply()
             }
-            AlertDialog.Builder(requireContext())
-                .setTitle("Save & Reload")
-                .setMessage("Changes have been saved. Do you want to restart the app to apply them?")
-                .setPositiveButton("Yes") { _, _ ->
-                    dismiss()
-                    restartApp()
-                }
-                .setNegativeButton("No") { _, _ ->
-                    showToast("Settings saved. Restart manually to apply.")
-                    dismiss()
-                }
-                .show()
+            showToast("Impostazioni salvate. Riavvia l'applicazione per applicarle")
+            dismiss()
         }
-    }
 
-    private fun restartApp() {
-        try {
-            val context = requireContext().applicationContext
-            val packageManager = context.packageManager
-            val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-            val componentName = intent?.component
-
-            if (componentName != null) {
-                val restartIntent = Intent.makeRestartActivityTask(componentName)
-                context.startActivity(restartIntent)
-                Runtime.getRuntime().exit(0)
-            } else {
-                showToast("Could not restart app")
-            }
-        } catch (e: Exception) {
-            showToast("Restart error: ${e.message}")
-        }
     }
 }

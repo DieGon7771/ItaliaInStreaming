@@ -109,7 +109,7 @@ class VidguardExtractor : ExtractorApi() {
             r,
             "thread_rhino",
             3000000
-        ) // StackSize 3Mb: Run in a thread because rhino requires more stack size for large scripts.
+        )
         t.start()
         t.join()
         t.interrupt()
