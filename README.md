@@ -16,7 +16,7 @@ Clicca sull'immagine per installare la repo oppure vai in *Impostazioni* -> *Est
 
 
  ## 👥 Community
-**Gruppo Telegram**: [ItaliaInStreaming](https://t.me/CloudStreamRepo)
+**Gruppo Telegram**: [CloudstreamItalia](https://t.me/CloudStreamRepo)
 
 ## ⚒️ Tecnologie Utilizzate
 
