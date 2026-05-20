@@ -33,6 +33,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.random.Random
 
 
 class Torrentio : TmdbProvider() {
@@ -82,7 +83,12 @@ class Torrentio : TmdbProvider() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val resp = app.get("${request.data}&page=$page", headers = authHeaders).body.string()
+        val resp = try {
+            app.get("${request.data}&page=$page&random=${Random.nextInt()}", timeout = 15000, headers = authHeaders).body.string()
+        } catch (e: Exception) {
+            Log.w("Torrentio", "Gzip error, retry: ${e.message}")
+            app.get("${request.data}&page=$page&random=${Random.nextInt()}", timeout = 30000, headers = authHeaders).body.string()
+        }
         val parsedResponse = parseJson<Results>(resp).results?.mapNotNull { media ->
             val type = if (request.data.contains("tv")) "tv" else "movie"
             media.toSearchResponse(type = type)
