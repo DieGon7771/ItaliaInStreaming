@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.SearchResponseList
 import com.lagradost.cloudstream3.ShowStatus
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.addDate
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.mainPageOf
@@ -153,7 +154,7 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
             res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
-            val episodes = mutableListOf<LoadResponse>()
+            val episodes = mutableListOf<Episode>()
             res.seasons?.forEach { season ->
                 val seasonUrl = "$tmdbAPI/tv/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=it"
                 app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes?.forEach { eps ->
