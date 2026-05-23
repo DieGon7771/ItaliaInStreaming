@@ -42,9 +42,11 @@ jobs:
       - name: Access Secrets
         env:
           TMDB_API: ${{ secrets.TMDB_API }}
+          TMDB_API3: ${{ secrets.TMDB_API3 }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo TMDB_API=$TMDB_API >> secrets.properties
+          echo TMDB_API3=$TMDB_API3 >> secrets.properties
 
       - name: Build Plugins
         env:

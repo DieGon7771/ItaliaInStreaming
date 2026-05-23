@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
-version = 10
+version = 11
 
 android {
     buildFeatures {
@@ -11,7 +11,7 @@ android {
         val properties = Properties()
         properties.load(project.rootProject.file("secrets.properties").inputStream())
         android.buildFeatures.buildConfig = true
-        buildConfigField("String", "TMDB_API", "\"${properties.getProperty("TMDB_API")}\"")
+        buildConfigField("String", "TMDB_API3", "\"${properties.getProperty("TMDB_API3")}\"")
     }
 }
 

@@ -38,8 +38,6 @@ import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import it.dogior.hadEnough.SubsExtractors.invokeOpenSubs
 import it.dogior.hadEnough.SubsExtractors.invokeWatchsomuch
-import java.util.concurrent.TimeUnit
-
 class StremioX(override var mainUrl: String, override var name: String) : TmdbProvider() {
     override var lang = "it"
     override val hasMainPage = true
@@ -49,72 +47,7 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
     companion object {
         const val TRACKER_LIST_URL = "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
         private const val tmdbAPI = "https://api.themoviedb.org/3"
-        private const val apiKey = BuildConfig.TMDB_API
-        
-        private val isV4Key: Boolean by lazy {
-            apiKey.length > 50 && apiKey.startsWith("eyJ")
-        }
-        
-        private val authHeaders: Map<String, String> by lazy {
-            if (isV4Key) {
-                mapOf("Authorization" to "Bearer $apiKey", "accept" to "application/json")
-            } else {
-                emptyMap()
-            }
-        }
-        
-        private fun buildUrl(baseUrl: String): String {
-            return if (isV4Key) {
-                baseUrl
-            } else {
-                if (baseUrl.contains("?")) {
-                    "$baseUrl&api_key=$apiKey"
-                } else {
-                    "$baseUrl?api_key=$apiKey"
-                }
-            }
-        }
-        
-        private class TMDBRequestCache {
-            private val cache = mutableMapOf<String, Pair<Long, String>>()
-            private val cacheDuration = TimeUnit.HOURS.toMillis(12)
-            
-            fun getCached(url: String): String? {
-                val cached = cache[url]
-                return if (cached != null && System.currentTimeMillis() - cached.first < cacheDuration) {
-                    cached.second
-                } else {
-                    null
-                }
-            }
-            
-            fun setCached(url: String, data: String) {
-                cache[url] = Pair(System.currentTimeMillis(), data)
-            }
-        }
-        
-        private val cache = TMDBRequestCache()
-        
-        private suspend fun makeTMDBRequest(url: String): String {
-            val cached = cache.getCached(url)
-            if (cached != null) {
-                return cached
-            }
-            
-            val response = if (isV4Key) {
-                app.get(url, headers = authHeaders)
-            } else {
-                app.get(url)
-            }
-            
-            if (!response.isSuccessful) {
-                throw ErrorLoadingException("Errore TMDB API: ${response.code}")
-            }
-            
-            val text = response.text
-            cache.setCached(url, text)
-            return text
-        }
+        private const val apiKey = BuildConfig.TMDB_API3
 
         fun getType(t: String?): TvType {
             return when (t) {
@@ -132,9 +65,9 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
     }
 
     override val mainPage = mainPageOf(
-        buildUrl("$tmdbAPI/trending/all/day?region=IT&language=it") to "Trending",
-        buildUrl("$tmdbAPI/movie/popular?region=IT&language=it") to "Film Popolari",
-        buildUrl("$tmdbAPI/tv/popular?region=IT&language=it") to "Serie TV Popolari"
+        "$tmdbAPI/trending/all/day?api_key=$apiKey&region=IT&language=it" to "Trending",
+        "$tmdbAPI/movie/popular?api_key=$apiKey&region=IT&language=it" to "Film Popolari",
+        "$tmdbAPI/tv/popular?api_key=$apiKey&region=IT&language=it" to "Serie TV Popolari"
     )
 
     private fun getImageUrl(link: String?): String? {
@@ -154,10 +87,10 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
             if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669|190370"
         val type = if (request.data.contains("/movie")) "movie" else "tv"
         
-        val responseText = makeTMDBRequest("${request.data}&language=it$adultQuery&page=$page")
-        val home = parseJson<Results>(responseText)?.results?.mapNotNull { media ->
-            media.toSearchResponse(type)
-        } ?: throw ErrorLoadingException("Invalid Json response")
+        val home = app.get("${request.data}$adultQuery&page=$page")
+            .parsedSafe<Results>()?.results?.mapNotNull { media ->
+                media.toSearchResponse(type)
+            } ?: throw ErrorLoadingException("Invalid Json response")
         
         return newHomePageResponse(request.name, home)
     }
@@ -175,12 +108,9 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query,1)?.items
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
-        val url = buildUrl(
-            "$tmdbAPI/search/multi?language=it&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}"
-        )
-        
-        val responseText = makeTMDBRequest(url)
-        return parseJson<Results>(responseText)?.results?.mapNotNull { media ->
+        return app.get(
+            "$tmdbAPI/search/multi?api_key=$apiKey&language=it&query=$query&page=$page&include_adult=${settingsForProvider.enableAdult}"
+        ).parsedSafe<Results>()?.results?.mapNotNull { media ->
             media.toSearchResponse()
         }?.toNewSearchResponseList()
     }
@@ -189,17 +119,13 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
         val data = parseJson<Data>(url)
         val type = getType(data.type)
         
-        val resUrl = buildUrl(
+        val res = app.get(
             if (type == TvType.Movie) {
-                "$tmdbAPI/movie/${data.id}?language=it&append_to_response=keywords,credits,external_ids,videos,recommendations"
+                "$tmdbAPI/movie/${data.id}?api_key=$apiKey&language=it&append_to_response=keywords,credits,external_ids,videos,recommendations"
             } else {
-                "$tmdbAPI/tv/${data.id}?language=it&append_to_response=keywords,credits,external_ids,videos,recommendations"
+                "$tmdbAPI/tv/${data.id}?api_key=$apiKey&language=it&append_to_response=keywords,credits,external_ids,videos,recommendations"
             }
-        )
-        
-        val responseText = makeTMDBRequest(resUrl)
-        val res = parseJson<MediaDetail>(responseText)
-            ?: throw ErrorLoadingException("Invalid Json Response")
+        ).parsedSafe<MediaDetail>() ?: throw ErrorLoadingException("Invalid Json Response")
 
         val title = res.title ?: res.name ?: return null
         val poster = getOriImageUrl(res.posterPath)
@@ -228,9 +154,8 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
 
         return if (type == TvType.TvSeries) {
             val episodes = res.seasons?.mapNotNull { season ->
-                val seasonUrl = buildUrl("$tmdbAPI/tv/${data.id}/season/${season.seasonNumber}?language=it")
-                val seasonText = makeTMDBRequest(seasonUrl)
-                parseJson<MediaDetailEpisodes>(seasonText)?.episodes?.map { eps ->
+                val seasonUrl = "$tmdbAPI/tv/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=it"
+                val seasonText = app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
                         newEpisode(LoadData(
                             res.external_ids?.imdb_id,
                             eps.seasonNumber,
