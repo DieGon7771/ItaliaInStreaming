@@ -155,7 +155,7 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
         return if (type == TvType.TvSeries) {
             val episodes = res.seasons?.mapNotNull { season ->
                 val seasonUrl = "$tmdbAPI/tv/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=it"
-                val seasonText = app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes?.map { eps ->
+                val seasonText = app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes.orEmpty().map { eps ->
                         newEpisode(LoadData(
                             res.external_ids?.imdb_id,
                             eps.seasonNumber,
@@ -179,7 +179,7 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
                 this.backgroundPosterUrl = bgPoster
                 this.year = year
                 this.plot = res.overview
-                this.tags =  keywords.takeIf { !it.isNullOrEmpty() } ?: genres
+                this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: (genres ?: emptyList())
                 this.score = Score.from10(res.vote_average.toString())
                 this.showStatus = getStatus(res.status)
                 this.recommendations = recommendations
@@ -201,7 +201,7 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
                 this.year = year
                 this.plot = res.overview
                 this.duration = res.runtime
-                this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: genres
+                this.tags = keywords.takeIf { !it.isNullOrEmpty() } ?: (genres ?: emptyList())
                 this.score = Score.from10(res.vote_average.toString())
                 this.recommendations = recommendations
                 this.actors = actors
