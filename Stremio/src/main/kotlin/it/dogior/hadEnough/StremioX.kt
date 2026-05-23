@@ -153,9 +153,11 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
             res.videos?.results?.map { "https://www.youtube.com/watch?v=${it.key}" }?.randomOrNull()
 
         return if (type == TvType.TvSeries) {
-            val episodes = res.seasons?.mapNotNull { season ->
+            val episodes = mutableListOf<LoadResponse>()
+            res.seasons?.forEach { season ->
                 val seasonUrl = "$tmdbAPI/tv/${data.id}/season/${season.seasonNumber}?api_key=$apiKey&language=it"
-                val seasonText = app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes.orEmpty().map { eps ->
+                app.get(seasonUrl).parsedSafe<MediaDetailEpisodes>()?.episodes?.forEach { eps ->
+                    episodes.add(
                         newEpisode(LoadData(
                             res.external_ids?.imdb_id,
                             eps.seasonNumber,
@@ -170,8 +172,9 @@ class StremioX(override var mainUrl: String, override var name: String) : TmdbPr
                             this.description = eps.overview
                             this.addDate(eps.airDate)
                         }
-                    }
-            }?.flatten() ?: listOf()
+                    )
+                }
+            }
             newTvSeriesLoadResponse(
                 title, url, if (isAnime) TvType.Anime else TvType.TvSeries, episodes
             ) {
