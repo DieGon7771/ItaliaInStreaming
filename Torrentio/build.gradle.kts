@@ -8,7 +8,7 @@ cloudstream {
     // All of these properties are optional, you can safely remove them
     description =
         "Torrent da Torrentio"
-    authors = listOf("doGior")
+    authors = listOf("DieGon")
 
     /**
      * Status int as the following:

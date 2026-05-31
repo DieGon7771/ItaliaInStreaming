@@ -43,6 +43,11 @@ Spiegazione dettagliata della homepage personalizzata (configurazione home).
 
 [Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_SectionOrganizer.md)
 
+**StreamITA – Guida** 
+Spiegazione dettagliata ......
+
+[Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_StreamITA.md)
+
 ## 🔀 Crediti
 • **La maggior parte dei plugin** sono stati forkati da: [doGiorsHadEnough](https://github.com/doGior/doGiorsHadEnough) 
 

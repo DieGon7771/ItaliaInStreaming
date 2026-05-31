@@ -1,12 +1,12 @@
 package it.dogior.hadEnough
 
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import it.dogior.hadEnough.AnimeSaturnExtractor
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
+import java.net.URLEncoder
 import java.util.Locale
 
 const val TAG = "AnimeSaturn"
@@ -136,31 +136,69 @@ class AnimeSaturn : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        if (query.isBlank()) return emptyList()
-        
-        val searchUrl = "$mainUrl/index.php?search=1&key=${query}"
-        
-        try {
-            val response = app.get(searchUrl, timeout = timeout).text
-            val json = parseJson<List<Map<String, Any>>>(response)
-            
-            return json.mapNotNull { anime: Map<String, Any> ->
-                val rawName = anime["name"] as? String ?: return@mapNotNull null
-                val name = cleanTitle(rawName)
-                val link = anime["link"] as? String ?: return@mapNotNull null
-                val image = anime["image"] as? String ?: ""
-                
-                val isDub = rawName.contains("(ITA)") || link.contains("-ITA")
-                
-                newAnimeSearchResponse(name, "/anime/$link") {
-                    this.posterUrl = fixUrlNull(image)
-                    this.type = TvType.Anime
-                    addDubStatus(isDub)
-                }
-            }
-        } catch (e: Exception) {
+        Log.d(TAG, "🔍 search() → query: '$query'")
+
+        if (query.isBlank()) {
+            Log.d(TAG, "⚠️ search() → query vuota")
             return emptyList()
         }
+
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
+        val results = mutableListOf<SearchResponse>()
+        var page = 1
+        var hasNext = true
+
+        while (hasNext && page <= 3) {
+            val url = if (page == 1) {
+                "$mainUrl/animelist?search=$encodedQuery"
+            } else {
+                "$mainUrl/animelist?page=$page&search=$encodedQuery"
+            }
+            Log.d(TAG, "🌐 search() → pagina $page: $url")
+
+            try {
+                val doc = app.get(url, timeout = timeout).document
+                val items = doc.select(".list-group-item")
+                Log.d(TAG, "📄 search() → pagina $page, items: ${items.size}")
+
+                if (items.isEmpty()) break
+
+                items.forEach { item ->
+                    val badge = item.select(".badge.badge-archivio.badge-light").first() ?: return@forEach
+                    val rawTitle = badge.text().trim()
+                    if (rawTitle.isBlank()) return@forEach
+                    val title = cleanTitle(rawTitle)
+                    val href = fixUrl(badge.attr("href"))
+
+                    val poster = item.select(".locandina-archivio").attr("src").ifEmpty {
+                        item.select(".copertina-archivio").attr("src")
+                    }
+                    val isDub = rawTitle.contains("(ITA)") || href.contains("-ITA")
+
+                    Log.d(TAG, "🎌 search() → '$title' href='$href' dub=$isDub")
+
+                    results.add(
+                        newAnimeSearchResponse(title, href) {
+                            this.posterUrl = fixUrlNull(poster)
+                            this.type = TvType.Anime
+                            addDubStatus(isDub)
+                        }
+                    )
+                }
+
+                hasNext = doc.select("a[href*='page=']").any {
+                    val h = it.attr("href")
+                    h.contains("page=${page + 1}") || h.contains("page%3D${page + 1}")
+                }
+                page++
+            } catch (e: Exception) {
+                Log.d(TAG, "❌ search() → eccezione pagina $page: ${e.message}")
+                break
+            }
+        }
+
+        Log.d(TAG, "✅ search() → risultati totali: ${results.size}")
+        return results
     }
 
     override suspend fun load(url: String): LoadResponse? {
@@ -280,7 +318,9 @@ class AnimeSaturn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.i(TAG, "🎬 loadLinks chiamato → data=$data")
         AnimeSaturnExtractor().getUrl(data, mainUrl, subtitleCallback, callback)
+        Log.i(TAG, "🔚 loadLinks completato")
         return true
     }
 }
