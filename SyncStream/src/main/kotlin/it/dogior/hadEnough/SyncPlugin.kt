@@ -12,7 +12,7 @@ import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKeys
 import com.lagradost.cloudstream3.ui.home.HomeViewModel.Companion.getResumeWatching
-import com.lagradost.cloudstream3.utils.DataStore.mapper
+import com.lagradost.cloudstream3.mapper
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import com.lagradost.cloudstream3.utils.DataStoreHelper.getAccounts
 import com.lagradost.cloudstream3.utils.DataStoreHelper.deleteAllResumeStateIds
