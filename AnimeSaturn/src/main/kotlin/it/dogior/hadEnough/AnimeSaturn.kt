@@ -25,7 +25,7 @@ class AnimeSaturn : MainAPI() {
         "$mainUrl/toplist" to "Top Anime",
         "$mainUrl/animeincorso" to "Anime in Corso",
         "$mainUrl/newest" to "Nuove Aggiunte",
-        "$mainUrl/upcoming" to "In Arrivo...",
+   //     "$mainUrl/upcoming" to "In Arrivo...",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
