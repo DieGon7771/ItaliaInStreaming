@@ -139,3 +139,55 @@ data class TorrentioStream(
     @JsonProperty("infoHash") val infoHash: String? = null,
     @JsonProperty("fileIdx") val fileIdx: Int? = null
 )
+
+// ── Debrid DTOs ──
+
+data class DebianRoot(
+    @JsonProperty("streams") val streams: List<DebianStream> = emptyList()
+)
+
+data class DebianStream(
+    @JsonProperty("name") val name: String = "",
+    @JsonProperty("title") val title: String = "",
+    @JsonProperty("url") val url: String = "",
+    @JsonProperty("behaviorHints") val behaviorHints: DebianBehaviorHints = DebianBehaviorHints()
+)
+
+data class DebianBehaviorHints(
+    @JsonProperty("bingeGroup") val bingeGroup: String? = null,
+    @JsonProperty("filename") val filename: String? = null
+)
+
+data class TorBoxDebian(
+    @JsonProperty("streams") val streams: List<TorBoxDebianStream> = emptyList()
+)
+
+data class TorBoxDebianStream(
+    @JsonProperty("name") val name: String = "",
+    @JsonProperty("description") val description: String = "",
+    @JsonProperty("url") val url: String = "",
+    @JsonProperty("behaviorHints") val behaviorHints: TorBoxHints = TorBoxHints()
+)
+
+data class TorBoxHints(
+    @JsonProperty("notWebReady") val notWebReady: Boolean = false,
+    @JsonProperty("videoSize") val videoSize: Long = 0,
+    @JsonProperty("filename") val filename: String = "",
+    @JsonProperty("bingeGroup") val bingeGroup: String = ""
+)
+
+data class MeteorRoot(
+    @JsonProperty("streams") val streams: List<MeteorStream>? = null
+)
+
+data class MeteorStream(
+    @JsonProperty("name") val name: String = "",
+    @JsonProperty("description") val description: String = "",
+    @JsonProperty("url") val url: String = "",
+    @JsonProperty("behaviorHints") val behaviorHints: MeteorHints = MeteorHints()
+)
+
+data class MeteorHints(
+    @JsonProperty("filename") val filename: String? = null,
+    @JsonProperty("videoSize") val videoSize: Long? = null
+)

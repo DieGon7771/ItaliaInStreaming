@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Title Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Impostazioni di Torrentio"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp" />
+
+            <ImageView
+                android:id="@+id/save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="Save Settings"
+                android:padding="5dp" />
+        </LinearLayout>
+
+        <!-- Debrid Providers -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Debrid Providers"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="10dp" />
+
+        <Spinner
+            android:id="@+id/debrid_provider_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:drawable/btn_dropdown"
+            android:focusable="true"
+            android:nextFocusDown="@id/debrid_key_input" />
+
+        <EditText
+            android:id="@+id/debrid_key_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Inserisci API Key / URL"
+            android:inputType="text"
+            android:padding="8dp"
+            android:layout_marginTop="5dp"
+            android:focusable="true"
+            android:nextFocusUp="@id/debrid_provider_spinner"
+            android:nextFocusDown="@id/delete_img" />
+
+        <!-- Reset Button -->
+        <Button
+            android:id="@+id/delete_img"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:layout_marginTop="20dp"
+            android:focusable="true"
+            android:nextFocusUp="@id/debrid_key_input" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

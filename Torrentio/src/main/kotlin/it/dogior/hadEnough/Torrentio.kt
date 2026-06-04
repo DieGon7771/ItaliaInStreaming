@@ -30,14 +30,16 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newSearchResponseList
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.Qualities
+import android.content.SharedPreferences
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.random.Random
 
 
-class Torrentio : TmdbProvider() {
+class Torrentio(private val sharedPref: SharedPreferences? = null) : TmdbProvider() {
     private val torrentioUrl = "https://torrentio.strem.fun"
+    private val torboxUrl = "https://stremio.torbox.app"
     override var mainUrl =
         "$torrentioUrl/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,ilcorsaronero,magnetdl|sort=seeders|language=italian"
     override var name = "Torrentio"
@@ -234,21 +236,47 @@ class Torrentio : TmdbProvider() {
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
         val show = parseJson<LinkData>(data)
-        var success = false
-        val url = if (show.season == null) {
-            "$mainUrl/stream/movie/${show.imdbId}.json"
+        val id = show.imdbId ?: return false
+        val season = show.season
+        val episode = show.episode
+
+        val debridProvider = sharedPref?.getString("debrid_provider", "") ?: ""
+        val debridKey = sharedPref?.getString("debrid_key", "") ?: ""
+
+        val hasDebrid = debridProvider != "None" && debridProvider.isNotBlank() && debridKey.isNotBlank()
+
+        if (hasDebrid) {
+            when (debridProvider) {
+                "RealDebrid" -> invokeTorrentioDebian(mainUrl, debridKey, id, season, episode, callback, "realdebrid")
+                "Premiumize" -> invokeTorrentioDebian(mainUrl, debridKey, id, season, episode, callback, "premiumize")
+                "TorBox" -> invokeTorbox(torboxUrl, debridKey, id, season, episode, callback)
+                else -> return invokeMagnetTorrentio(mainUrl, id, season, episode, callback)
+            }
+            return true
+        }
+
+        return invokeMagnetTorrentio(mainUrl, id, season, episode, callback)
+    }
+
+    private suspend fun invokeMagnetTorrentio(
+        baseUrl: String,
+        id: String,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val url = if (season == null) {
+            "$baseUrl/stream/movie/$id.json"
         } else {
-            "$mainUrl/stream/series/${show.imdbId}:${show.season}:${show.episode}.json"
+            "$baseUrl/stream/series/$id:$season:$episode.json"
         }
         val headers = mapOf(
             "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
         )
-        val res = app.get(url, headers = headers, timeout = 100L)
-        val body = res.body.string()
-        val response = parseJson<TorrentioResponse>(body)
-
-        response.streams.forEach { stream ->
+        val res = app.get(url, headers = headers, timeout = 15000L).parsedSafe<TorrentioResponse>()
+        var success = false
+        res?.streams?.forEach { stream ->
             val formattedTitleName = stream.title
                 ?.let { title ->
                     val tags = "\\[(.*?)]".toRegex().findAll(title)
@@ -275,6 +303,62 @@ class Torrentio : TmdbProvider() {
             )
         }
         return success
+    }
+
+    private suspend fun invokeTorbox(
+        baseUrl: String,
+        token: String,
+        id: String,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val url = if (season == null) {
+            "$baseUrl/$token/stream/movie/$id.json"
+        } else {
+            "$baseUrl/$token/stream/series/$id:$season:$episode.json"
+        }
+        val res = app.get(url, timeout = 15000L).parsedSafe<TorBoxDebian>() ?: return
+        res.streams.forEach { stream ->
+            val name = stream.behaviorHints.filename.ifBlank { stream.name }
+            callback.invoke(
+                newExtractorLink("TorBox", name, stream.url, INFER_TYPE) {
+                    this.referer = ""
+                    this.quality = getIndexQuality(stream.name)
+                }
+            )
+        }
+    }
+
+    private suspend fun invokeTorrentioDebian(
+        baseUrl: String,
+        token: String,
+        id: String,
+        season: Int?,
+        episode: Int?,
+        callback: (ExtractorLink) -> Unit,
+        provider: String = "realdebrid"
+    ) {
+        val debridUrl = if (season == null) {
+            "$baseUrl|$provider=$token/stream/movie/$id.json"
+        } else {
+            "$baseUrl|$provider=$token/stream/series/$id:$season:$episode.json"
+        }
+        val res = app.get(debridUrl, timeout = 15000L).parsedSafe<DebianRoot>() ?: return
+        res.streams.forEach { stream ->
+            val name = (stream.behaviorHints.filename ?: "").ifBlank { stream.name }
+            callback.invoke(
+                newExtractorLink(
+                    if (provider == "premiumize") "Premiumize" else "RealDebrid",
+                    name,
+                    stream.url,
+                    INFER_TYPE
+                ) {
+                    this.referer = ""
+                    this.quality = getIndexQuality(stream.name)
+                }
+            )
+        }
     }
 
     private suspend fun generateMagnetLink(url: String, hash: String?): String {
