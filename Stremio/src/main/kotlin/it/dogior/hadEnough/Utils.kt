@@ -1,16 +1,138 @@
 package it.dogior.hadEnough
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.google.gson.annotations.SerializedName
 import com.lagradost.cloudstream3.APIHolder.unixTimeMS
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.newSubtitleFile
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.SubtitleHelper
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.newExtractorLink
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.sequences.forEach
+
+// ── Section data model ──
+
+data class StreamAddonConfig(
+    val id: Long = System.currentTimeMillis(),
+    val name: String = "",
+    val url: String = "",
+    val type: String = "https"
+)
+
+data class SectionConfig(
+    val id: Long = System.currentTimeMillis(),
+    val name: String = "",
+    val catalogUrl: String? = null,
+    val streamAddons: List<StreamAddonConfig> = emptyList()
+)
+
+// ── Stream data classes shared across providers ──
+
+data class Subtitle(
+    val url: String?,
+    val lang: String?,
+    val id: String?,
+)
+
+data class ProxyHeaders(
+    val request: Map<String, String>?,
+)
+
+data class BehaviorHints(
+    val proxyHeaders: ProxyHeaders?,
+    val headers: Map<String, String>?,
+)
+
+data class Stream(
+    val name: String?,
+    val title: String?,
+    val url: String?,
+    val description: String?,
+    val ytId: String?,
+    val externalUrl: String?,
+    val behaviorHints: BehaviorHints?,
+    val infoHash: String?,
+    val sources: List<String> = emptyList(),
+    val subtitles: List<Subtitle> = emptyList()
+) {
+    suspend fun runCallback(
+        trackersUrl: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        if (url != null) {
+            callback.invoke(
+                newExtractorLink(
+                    name ?: "",
+                    fixSourceName(name, title),
+                    url,
+                    INFER_TYPE,
+                ) {
+                    this.quality = getQuality(listOf(description, title, name))
+                    this.headers = behaviorHints?.proxyHeaders?.request ?: behaviorHints?.headers ?: mapOf()
+                }
+            )
+            subtitles.map { sub ->
+                subtitleCallback.invoke(
+                    newSubtitleFile(
+                        SubtitleHelper.fromTagToEnglishLanguageName(sub.lang ?: "") ?: sub.lang
+                        ?: "",
+                        sub.url ?: return@map
+                    )
+                )
+            }
+        }
+        if (ytId != null) {
+            loadExtractor("https://www.youtube.com/watch?v=$ytId", subtitleCallback, callback)
+        }
+        if (externalUrl != null) {
+            loadExtractor(externalUrl, subtitleCallback, callback)
+        }
+        if (infoHash != null) {
+            val resp = app.get(trackersUrl).text
+            val otherTrackers = resp
+                .split("\n")
+                .filterIndexed { i, _ -> i % 2 == 0 }
+                .filter { s -> s.isNotEmpty() }.joinToString("") { "&tr=$it" }
+            val sourceTrackers = sources
+                .filter { it.startsWith("tracker:") }
+                .map { it.removePrefix("tracker:") }
+                .filter { s -> s.isNotEmpty() }.joinToString("") { "&tr=$it" }
+            val magnet = "magnet:?xt=urn:btih:${infoHash}${sourceTrackers}${otherTrackers}"
+            callback.invoke(
+                newExtractorLink(
+                    name ?: "",
+                    title ?: name ?: "",
+                    magnet,
+                ) {
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+    }
+}
+
+data class StreamsResponse(val streams: List<Stream>)
+
+data class LoadData(
+    val type: String? = null,
+    val id: String? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    val imdbId: String? = null,
+    val year: Int? = null
+)
 
 fun String.fixSourceUrl(): String {
     return this.replace("/manifest.json", "").replace("stremio://", "https://")

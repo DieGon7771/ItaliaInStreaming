@@ -29,7 +29,7 @@ Clicca sull'immagine per installare la repo oppure vai in *Impostazioni* -> *Est
 ## 📘 Guide Plugins
 
 **Stremio – Guida**
-Spiegazione dettagliata di StremioX (addon di streaming) e StremioC (addon catalogo).
+Spiegazione dettagliata di Stremio (configurazione addons).
 
 [Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_Stremio.md)
 

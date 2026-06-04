@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Layout: header -->
+    <string name="settings_header_title">Sezioni Stremio</string>
+    <string name="save_content_desc">Salva</string>
+    <string name="sections_header_title">Sezioni Stremio</string>
+    <string name="sections_header_desc">Ogni sezione ha 1 catalogo opzionale + fino a 5 stream addon</string>
+    <string name="sections_add_btn">AGGIUNGI SEZIONE</string>
+
+    <!-- Toast / dialogs -->
+    <string name="sections_saved">Sezioni salvate</string>
+    <string name="restart_title">Riavvia applicazione</string>
+    <string name="restart_message">Riavviare per applicare le modifiche?</string>
+    <string name="restart_positive">Riavvia</string>
+    <string name="restart_negative">Più tardi</string>
+
+    <!-- Section rows -->
+    <string name="addon_count">%1$d/5 addon</string>
+    <string name="catalog_custom">Catalogo</string>
+    <string name="catalog_tmdb">Catalogo: TMDB</string>
+    <string name="edit_btn">MODIFICA</string>
+    <string name="delete_btn">RIMUOVI</string>
+    <string name="delete_section_title">Rimuovi sezione</string>
+    <string name="delete_section_message">Rimuovere "%1$s"?</string>
+    <string name="delete_confirm">Rimuovi</string>
+    <string name="cancel">Annulla</string>
+
+    <!-- Section editor -->
+    <string name="editor_name_label">Nome sezione</string>
+    <string name="editor_name_hint">Es. Film, Serie TV…</string>
+    <string name="editor_catalog_label">URL catalogo (opzionale — vuoto = TMDB)</string>
+    <string name="editor_catalog_hint">https://...</string>
+    <string name="editor_addons_label">Stream addon (massimo 5)</string>
+    <string name="editor_addon_label">Addon #%1$d</string>
+    <string name="editor_addon_name_hint">Nome</string>
+    <string name="editor_addon_url_hint">https://...</string>
+    <string name="editor_title_edit">Modifica Sezione</string>
+    <string name="editor_title_new">Nuova Sezione</string>
+    <string name="editor_ok">OK</string>
+    <string name="editor_cancel">Annulla</string>
+    <string name="editor_name_required">Inserisci un nome</string>
+    <string name="editor_addon_default_name">Addon %1$d</string>
+
+    <!-- Migration fallbacks -->
+    <string name="migration_section_name">Sezione %1$d</string>
+    <string name="migration_addon_name">Stream</string>
+
+    <!-- SectionProvider page labels -->
+    <string name="tmdb_trending">Trending</string>
+    <string name="tmdb_popular_movies">Film Popolari</string>
+    <string name="tmdb_popular_tv">Serie TV Popolari</string>
+    <string name="upcoming_tag"> [UPCOMING]</string>
+</resources>
