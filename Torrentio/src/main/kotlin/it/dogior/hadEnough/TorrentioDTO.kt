@@ -158,24 +158,6 @@ data class DebianBehaviorHints(
     @JsonProperty("filename") val filename: String? = null
 )
 
-data class TorBoxDebian(
-    @JsonProperty("streams") val streams: List<TorBoxDebianStream> = emptyList()
-)
-
-data class TorBoxDebianStream(
-    @JsonProperty("name") val name: String = "",
-    @JsonProperty("description") val description: String = "",
-    @JsonProperty("url") val url: String = "",
-    @JsonProperty("behaviorHints") val behaviorHints: TorBoxHints = TorBoxHints()
-)
-
-data class TorBoxHints(
-    @JsonProperty("notWebReady") val notWebReady: Boolean = false,
-    @JsonProperty("videoSize") val videoSize: Long = 0,
-    @JsonProperty("filename") val filename: String = "",
-    @JsonProperty("bingeGroup") val bingeGroup: String = ""
-)
-
 data class MeteorRoot(
     @JsonProperty("streams") val streams: List<MeteorStream>? = null
 )

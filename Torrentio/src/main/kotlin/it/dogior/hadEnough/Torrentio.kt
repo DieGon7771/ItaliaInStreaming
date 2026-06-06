@@ -39,7 +39,6 @@ import kotlin.random.Random
 
 class Torrentio(private val sharedPref: SharedPreferences? = null) : TmdbProvider() {
     private val torrentioUrl = "https://torrentio.strem.fun"
-    private val torboxUrl = "https://stremio.torbox.app"
     override var mainUrl =
         "$torrentioUrl/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,ilcorsaronero,magnetdl|sort=seeders|language=italian"
     override var name = "Torrentio"
@@ -249,7 +248,7 @@ class Torrentio(private val sharedPref: SharedPreferences? = null) : TmdbProvide
             when (debridProvider) {
                 "RealDebrid" -> invokeTorrentioDebian(mainUrl, debridKey, id, season, episode, callback, "realdebrid")
                 "Premiumize" -> invokeTorrentioDebian(mainUrl, debridKey, id, season, episode, callback, "premiumize")
-                "TorBox" -> invokeTorbox(torboxUrl, debridKey, id, season, episode, callback)
+                "TorBox" -> invokeTorrentioDebian(mainUrl, debridKey, id, season, episode, callback, "torbox")
                 else -> return invokeMagnetTorrentio(mainUrl, id, season, episode, callback)
             }
             return true
@@ -303,31 +302,6 @@ class Torrentio(private val sharedPref: SharedPreferences? = null) : TmdbProvide
             )
         }
         return success
-    }
-
-    private suspend fun invokeTorbox(
-        baseUrl: String,
-        token: String,
-        id: String,
-        season: Int?,
-        episode: Int?,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val url = if (season == null) {
-            "$baseUrl/$token/stream/movie/$id.json"
-        } else {
-            "$baseUrl/$token/stream/series/$id:$season:$episode.json"
-        }
-        val res = app.get(url, timeout = 15000L).parsedSafe<TorBoxDebian>() ?: return
-        res.streams.forEach { stream ->
-            val name = stream.behaviorHints.filename.ifBlank { stream.name }
-            callback.invoke(
-                newExtractorLink("TorBox", name, stream.url, INFER_TYPE) {
-                    this.referer = ""
-                    this.quality = getIndexQuality(stream.name)
-                }
-            )
-        }
     }
 
     private suspend fun invokeTorrentioDebian(
