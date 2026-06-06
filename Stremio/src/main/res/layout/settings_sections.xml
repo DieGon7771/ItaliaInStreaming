@@ -73,6 +73,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginTop="8dp"
+                    android:focusable="true"
                     android:gravity="center"
                     android:text="AGGIUNGI SEZIONE"
                     android:textSize="14sp"

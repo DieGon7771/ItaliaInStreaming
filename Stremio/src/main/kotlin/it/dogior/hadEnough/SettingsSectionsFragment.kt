@@ -271,6 +271,8 @@ class SettingsSectionsFragment(
                 if (greenDrawable != null) background = greenDrawable
                 else applyOutlineBackground(this)
                 setTextColor(Color.parseColor("#997CFF9D"))
+                isFocusable = true
+                setOnFocusChangeListener { v, hasFocus -> v.alpha = if (hasFocus) 1f else 0.7f }
                 setOnClickListener { showEditDialog(requireView(), section) }
             }
             actionsRow.addView(editBtn)
@@ -287,6 +289,8 @@ class SettingsSectionsFragment(
                 if (dangerDrawable != null) background = dangerDrawable
                 else applyOutlineBackground(this)
                 setTextColor(Color.parseColor("#FFFF7F7F"))
+                isFocusable = true
+                setOnFocusChangeListener { v, hasFocus -> v.alpha = if (hasFocus) 1f else 0.7f }
                 setOnClickListener {
                     AlertDialog.Builder(requireContext())
                         .setTitle(str("delete_section_title", "Rimuovi sezione"))
