@@ -1,15 +1,11 @@
 // use an integer for version numbers
-version = 4
-
-dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-}
+version = 1
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
-    description = "Movies and Shows from OnlineSerieTV"
-    authors = listOf("doGior")
+    description = "Film e SerieTV da OnlineSerieTV"
+    authors = listOf("DieGon")
 
     /**
     * Status int as the following:
@@ -25,5 +21,5 @@ cloudstream {
     requiresResources = false
     language = "it"
 
-    iconUrl = "https://onlineserietv.online/wp-content/uploads/2023/01/cropped-tv-1.png"
+    iconUrl = "https://lingering-truth-455c.appbeta870.workers.dev/wp-content/uploads/2023/01/cropped-tv-1.png"
 }

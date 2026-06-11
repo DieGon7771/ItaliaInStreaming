@@ -17,7 +17,7 @@ include(
     "GuardaSerie",
     "Huhu",
     "IlGenioDelloStreaming",
-//    "OnlineSerieTV",
+    "OnlineSerieTV",
     "SectionOrganizer",
     "StreamingCommunity",
     "Stremio",
