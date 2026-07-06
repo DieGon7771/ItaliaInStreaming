@@ -1,6 +1,5 @@
 package it.dogior.hadEnough
 
-import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -34,8 +33,34 @@ class Huhu(domain: String, private val countries: Map<String, Boolean>, language
 
     private suspend fun getChannels(): List<Channel> {
         val enabledCountries = countries.filter { it.value }.keys.toList()
-        val response = app.get("$mainUrl/channels").body.string()
-        return parseJson<List<Channel>>(response).filter { it.country in enabledCountries }
+        val allChannels = mutableListOf<Channel>()
+        val headers = mapOf("Content-Type" to "application/json")
+
+        for (country in enabledCountries) {
+            var cursor: Long? = null
+            do {
+                val body = mapOf(
+                    "catalogId" to "iptv",
+                    "search" to "",
+                    "sort" to "trending",
+                    "filter" to mapOf("group" to country),
+                    "cursor" to cursor
+                )
+                val response = app.post("$mainUrl/mediaurl-catalog.json", headers = headers, json = body)
+                val catalog = parseJson<CatalogResponse>(response.body.string())
+                allChannels.addAll(catalog.items.map { item ->
+                    Channel(
+                        id = item.ids.id,
+                        name = item.name,
+                        url = item.url,
+                        group = item.group
+                    )
+                })
+                cursor = catalog.nextCursor
+            } while (cursor != null)
+        }
+
+        return allChannels
     }
 
     companion object {
@@ -43,10 +68,9 @@ class Huhu(domain: String, private val countries: Map<String, Boolean>, language
 
         @Suppress("ConstPropertyName")
         const val posterUrl =
-            "https://raw.githubusercontent.com/doGior/doGiorsHadEnough/master/Huhu/tv.png"
+            "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/Huhu/tv.png"
     }
 
-    // Funzione di estensione su Channel per generare LiveSearchResponse
     fun Channel.toSearchResponse(): LiveSearchResponse {
         return newLiveSearchResponse(
             name,
@@ -62,7 +86,7 @@ class Huhu(domain: String, private val countries: Map<String, Boolean>, language
             channels = getChannels()
         }
         val sections =
-            channels.groupBy { it.country }.map {
+            channels.groupBy { it.group ?: "Unknown" }.map {
                 HomePageList(
                     it.key,
                     it.value.map { channel -> channel.toSearchResponse() },
@@ -85,16 +109,20 @@ class Huhu(domain: String, private val countries: Map<String, Boolean>, language
     }
 
     override suspend fun load(url: String): LoadResponse {
-        Log.d("TV2", url)
         val channel = parseJson<Channel>(url)
-        val streamUrl = "https://huhu.to/play/${channel.id}/index.m3u8"
+
+        val resolveBody = mapOf("url" to channel.url)
+        val reqHeaders = mapOf("Content-Type" to "application/json")
+        val response = app.post("$mainUrl/mediaurl-resolve.json", headers = reqHeaders, json = resolveBody)
+        val resolved = parseJson<List<ResolveResponse>>(response.body.string()).first()
+
         return newLiveStreamLoadResponse(
             channel.name,
             url,
-            streamUrl
+            resolved.url
         ) {
             posterUrl = Companion.posterUrl
-            tags = listOf(channel.country)
+            tags = listOf(channel.group ?: "")
         }
     }
 
@@ -104,28 +132,70 @@ class Huhu(domain: String, private val countries: Map<String, Boolean>, language
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
+        val streamUrl = try {
+            val channel = parseJson<Channel>(data)
+            val resolveBody = mapOf("url" to channel.url)
+            val reqHeaders = mapOf("Content-Type" to "application/json")
+            val response = app.post("$mainUrl/mediaurl-resolve.json", headers = reqHeaders, json = resolveBody)
+            parseJson<List<ResolveResponse>>(response.body.string()).first().url
+        } catch (e: Exception) {
+            data
+        }
+
         callback(
             newExtractorLink(
                 this.name,
                 this.name,
-                data,
+                streamUrl,
                 type = ExtractorLinkType.M3U8
             ) {
-                this.referer = ""
+                this.referer = mainUrl
                 this.quality = Qualities.Unknown.value
+                this.headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Referer" to mainUrl
+                )
             }
         )
         return true
     }
 
-    data class Channel(
-        @JsonProperty("country")
-        val country: String,
-        @JsonProperty("id")
-        val id: Long,
-        @JsonProperty("name")
+    // --- API response models ---
+
+    data class CatalogItem(
+        val type: String,
+        val ids: Ids,
+        val url: String,
         val name: String,
-        @JsonProperty("p")
-        val p: Int
+        @JsonProperty("group") val group: String?
+    )
+
+    data class Ids(val id: String)
+
+    data class CatalogResponse(
+        val items: List<CatalogItem>,
+        val nextCursor: Long?,
+        val features: Features?
+    )
+
+    data class Features(val filter: List<Filter>)
+
+    data class Filter(
+        val id: String,
+        val name: String,
+        val values: List<String>
+    )
+
+    data class ResolveResponse(
+        val id: String,
+        val name: String,
+        val url: String
+    )
+
+    data class Channel(
+        val id: String,
+        val name: String,
+        val url: String,
+        @JsonProperty("group") val group: String?
     )
 }

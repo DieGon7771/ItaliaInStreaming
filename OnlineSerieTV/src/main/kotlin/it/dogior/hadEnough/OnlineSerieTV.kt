@@ -32,13 +32,14 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import it.dogior.hadEnough.extractors.MaxStreamExtractor
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.SocketTimeoutException
 import kotlin.coroutines.resume
 
 class OnlineSerieTV : MainAPI() {
-    override var mainUrl = "https://lingering-truth-455c.diegon7771.workers.dev"
+    override var mainUrl = "https://onlineserietv.lol"
     override var name = "OnlineSerieTV"
     override val supportedTypes = setOf(
         TvType.Movie, TvType.TvSeries,
@@ -46,6 +47,17 @@ class OnlineSerieTV : MainAPI() {
     )
     override var lang = "it"
     override val hasMainPage = true
+
+    private suspend fun cachedGet(
+        url: String,
+        cacheKey: String,
+        profile: OnlineSerieTVCache.CacheProfile
+    ): Document {
+        OnlineSerieTVCache.get(cacheKey)?.let { return Jsoup.parse(it) }
+        val doc = app.get(url, timeout = 15000).document
+        OnlineSerieTVCache.put(cacheKey, doc.html(), profile)
+        return doc
+    }
 
     override val mainPage = mainPageOf(
 //        mainUrl to "Top 10 Film",
@@ -56,43 +68,45 @@ class OnlineSerieTV : MainAPI() {
         "$mainUrl/serie-tv-generi/animazione/" to "Serie TV: Animazione",
         "$mainUrl/film-generi/animazione/" to "Film: Animazione",
 
-        "$mainUrl/serie-tv-generi/documentario/" to "Serie TV: Documentario",
-        "$mainUrl/film-generi/documentario/" to "Film: Documentario",
+//        "$mainUrl/serie-tv-generi/documentario/" to "Serie TV: Documentario",
+//        "$mainUrl/film-generi/documentario/" to "Film: Documentario",
 
-        "$mainUrl/serie-tv-generi/action-adventure/" to "Serie TV: Azione e Avventura",
-        "$mainUrl/film-generi/avventura/" to "Film: Avventura",
+//        "$mainUrl/serie-tv-generi/action-adventure/" to "Serie TV: Azione e Avventura",
+//        "$mainUrl/film-generi/avventura/" to "Film: Avventura",
         "$mainUrl/film-generi/azione/" to "Film: Azione",
-        "$mainUrl/film-generi/supereroi/" to "Film: Supereroi",
+//        "$mainUrl/film-generi/supereroi/" to "Film: Supereroi",
 
         "$mainUrl/serie-tv-generi/sci-fi-fantasy/" to "Serie TV: Fantascienza e Fantasy",
-        "$mainUrl/film-generi/fantascienza/" to "Film: Fantascienza",
-        "$mainUrl/film-generi/fantasy/" to "Film: Fantasy",
+//        "$mainUrl/film-generi/fantascienza/" to "Film: Fantascienza",
+//        "$mainUrl/film-generi/fantasy/" to "Film: Fantasy",
 
-        "$mainUrl/serie-tv-generi/dramma/" to "Serie TV: Dramma",
-        "$mainUrl/film-generi/drammatico/" to "Film: Dramma",
-        "$mainUrl/film-generi/sentimentale/" to "Film: Sentimentale",
+//        "$mainUrl/serie-tv-generi/dramma/" to "Serie TV: Dramma",
+//        "$mainUrl/film-generi/drammatico/" to "Film: Dramma",
+//        "$mainUrl/film-generi/sentimentale/" to "Film: Sentimentale",
 
-        "$mainUrl/serie-tv-generi/commedia/" to "Serie TV: Commedia",
-        "$mainUrl/film-generi/commedia/" to "Film: Commedia",
+//        "$mainUrl/serie-tv-generi/commedia/" to "Serie TV: Commedia",
+//        "$mainUrl/film-generi/commedia/" to "Film: Commedia",
 
-        "$mainUrl/serie-tv-generi/crime/" to "Serie TV: Crime",
-        "$mainUrl/serie-tv-generi/mistero/" to "Serie TV: Mistero",
+//        "$mainUrl/serie-tv-generi/crime/" to "Serie TV: Crime",
+//        "$mainUrl/serie-tv-generi/mistero/" to "Serie TV: Mistero",
 
-        "$mainUrl/serie-tv-generi/war-politics/" to "Serie TV: Guerra e Politica",
+//        "$mainUrl/serie-tv-generi/war-politics/" to "Serie TV: Guerra e Politica",
         "$mainUrl/film-generi/horror/" to "Film: Horror",
-        "$mainUrl/film-generi/thriller/" to "Film: Thriller",
+//        "$mainUrl/film-generi/thriller/" to "Film: Thriller",
 
-        "$mainUrl/serie-tv-generi/reality/" to "Serie TV: Reality",
+//        "$mainUrl/serie-tv-generi/reality/" to "Serie TV: Reality",
 
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        val response = try {
-            app.get(request.data).document
-        } catch (e: SocketTimeoutException) {
-            return null
+        val cacheKey = "OSV:PAGE:${request.data}"
+        val doc = try {
+            cachedGet(request.data, cacheKey, OnlineSerieTVCache.CacheProfile.PAGE)
+        } catch (e: Exception) {
+            OnlineSerieTVCache.get(cacheKey, allowExpired = true)?.let { Jsoup.parse(it) }
+                ?: return null
         }
-        val searchResponses = getItems(request.name, response)
+        val searchResponses = getItems(request.name, doc)
         return newHomePageResponse(HomePageList(request.name, searchResponses), false)
     }
 
@@ -187,8 +201,9 @@ class OnlineSerieTV : MainAPI() {
 
     // this function gets called when you search for something
     override suspend fun search(query: String): List<SearchResponse> {
-        val response = app.get("$mainUrl/?s=$query")
-        val page = response.document
+        val url = "$mainUrl/?s=$query"
+        val cacheKey = "OSV:SEARCH:$query"
+        val page = cachedGet(url, cacheKey, OnlineSerieTVCache.CacheProfile.SEARCH)
         val itemGrid = page.selectFirst("#box_movies")!!
         val items = itemGrid.select(".movie")
         val searchResponses = items.map {
@@ -198,7 +213,8 @@ class OnlineSerieTV : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val response = app.get(url).document
+        val cacheKey = "OSV:DETAIL:$url"
+        val response = cachedGet(url, cacheKey, OnlineSerieTVCache.CacheProfile.DETAIL)
         val dati = response.selectFirst(".headingder")!!
         val poster = dati.select(".imgs > img").attr("src").replace(Regex("""-\d+x\d+"""), "")
         val title = dati.select(".dataplus > div:nth-child(1) > h1").text().trim()
