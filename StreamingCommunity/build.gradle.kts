@@ -1,14 +1,14 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 // use an integer for version numbers
 
-version = 52
+version = 53
 
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
     description = "Film e SerieTV da StreamingCommunity"
-    authors = listOf("doGior","Nanduuu03","DieGon")
+    authors = listOf("Nanduuu03","DieGon")
 
     /**
     * Status int as the following:

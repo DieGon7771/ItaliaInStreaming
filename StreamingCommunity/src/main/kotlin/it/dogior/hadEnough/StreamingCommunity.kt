@@ -28,10 +28,9 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.newTvSeriesSearchResponse
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import org.jsoup.parser.Parser
@@ -42,22 +41,24 @@ class StreamingCommunity(
     override var lang: String = "it",
     private val showLogo: Boolean = true
 ) : MainAPI() {
-    override var mainUrl = Companion.mainUrl + lang
+    private val siteRootUrl = "https://streamingunity.dog/"
+    private val cdnHost = "cdn.streamingunity.dog"
+    private var inertiaVersion = ""
+    private var decodedXsrfToken = ""
+    private val headers = mapOf(
+        "Cookie" to "",
+        "X-Inertia" to true.toString(),
+        "X-Inertia-Version" to inertiaVersion,
+        "X-Requested-With" to "XMLHttpRequest",
+    ).toMutableMap()
+
+    override var mainUrl = siteRootUrl + lang
     override var name = Companion.name
     override var supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Cartoon, TvType.Documentary)
     override val hasMainPage = true
 
     companion object {
-        private var inertiaVersion = ""
-        private var decodedXsrfToken = ""
-        private val headers = mapOf(
-            "Cookie" to "",
-            "X-Inertia" to true.toString(),
-            "X-Inertia-Version" to inertiaVersion,
-            "X-Requested-With" to "XMLHttpRequest",
-        ).toMutableMap()
-        val mainUrl = "https://streamingunity.dog/"
         var name = "StreamingCommunity"
         val TAG = "SCommunity"
     }
@@ -70,66 +71,26 @@ class StreamingCommunity(
         "Accept" to "application/json"
     )
 
-    override val mainPage = mainPageOf("home" to "Home")
-
-    private data class SliderFetchRequestSlider(
-        val name: String,
-        val genre: String?
+    override val mainPage = mainPageOf(
+        SliderFetchRequestSlider(name = "top10", genre = null).toJson() to "Slider",
+        SliderFetchRequestSlider(name = "trending", genre = null).toJson() to "Slider",
+        SliderFetchRequestSlider(name = "latest", genre = null).toJson() to "Slider",
+        SliderFetchRequestSlider(name = "upcoming", genre = null).toJson() to "Slider",
+        GenreRequest(nameEN = "Animation", nameIT = "Animazione", id = 19).toJson() to "Genre",
+        GenreRequest(nameEN = "Adventure", nameIT = "Avventura", id = 11).toJson() to "Genre",
+        GenreRequest(nameEN = "Action", nameIT = "Azione", id = 4).toJson() to "Genre",
+        GenreRequest(nameEN = "Comedy", nameIT = "Commedia", id = 12).toJson() to "Genre",
+        GenreRequest(nameEN = "Crime", nameIT = "Crime", id = 2).toJson() to "Genre",
+        GenreRequest(nameEN = "Documentary", nameIT = "Documentario", id = 24).toJson() to "Genre",
+        GenreRequest(nameEN = "Drama", nameIT = "Dramma", id = 1).toJson() to "Genre",
+        GenreRequest(nameEN = "Family", nameIT = "Famiglia", id = 16).toJson() to "Genre",
+        GenreRequest(nameEN = "Science Fiction", nameIT = "Fantascienza", id = 10).toJson() to "Genre",
+        GenreRequest(nameEN = "Fantasy", nameIT = "Fantasy", id = 8).toJson() to "Genre",
+        GenreRequest(nameEN = "Horror", nameIT = "Horror", id = 7).toJson() to "Genre",
+        GenreRequest(nameEN = "Reality", nameIT = "Reality", id = 18).toJson() to "Genre",
+        GenreRequest(nameEN = "Romance", nameIT = "Romance", id = 15).toJson() to "Genre",
+        GenreRequest(nameEN = "Thriller", nameIT = "Thriller", id = 5).toJson() to "Genre",
     )
-
-    private data class SliderFetchRequestBody(
-        val sliders: List<SliderFetchRequestSlider>
-    )
-
-    private val sliderFetchRequestBody = SliderFetchRequestBody(
-        sliders = listOf(
-            SliderFetchRequestSlider(name = "top10", genre = null),
-            SliderFetchRequestSlider(name = "trending", genre = null),
-            SliderFetchRequestSlider(name = "latest", genre = null),
-            SliderFetchRequestSlider(name = "upcoming", genre = null),
-            SliderFetchRequestSlider(name = "genre", genre = "Animation"),
-            SliderFetchRequestSlider(name = "genre", genre = "Adventure"),
-            SliderFetchRequestSlider(name = "genre", genre = "Action"),
-            SliderFetchRequestSlider(name = "genre", genre = "Comedy"),
-            SliderFetchRequestSlider(name = "genre", genre = "Crime"),
-            SliderFetchRequestSlider(name = "genre", genre = "Documentary"),
-            SliderFetchRequestSlider(name = "genre", genre = "Drama"),
-            SliderFetchRequestSlider(name = "genre", genre = "Family"),
-            SliderFetchRequestSlider(name = "genre", genre = "Science Fiction"),
-            SliderFetchRequestSlider(name = "genre", genre = "Fantasy"),
-            SliderFetchRequestSlider(name = "genre", genre = "Horror"),
-            SliderFetchRequestSlider(name = "genre", genre = "Reality"),
-            SliderFetchRequestSlider(name = "genre", genre = "Romance"),
-            SliderFetchRequestSlider(name = "genre", genre = "Thriller")
-        )
-    )
-
-    private fun SliderFetchRequestBody.toRequestBody(): RequestBody {
-        return this.toJson().toRequestBody("application/json;charset=utf-8".toMediaType())
-    }
-
-    private suspend fun fetchSliderSectionsInBatches(): List<HomePageList> {
-        val maxSlidersPerRequest = 6
-        val allSections = mutableListOf<HomePageList>()
-
-        sliderFetchRequestBody.sliders
-            .chunked(maxSlidersPerRequest)
-            .forEachIndexed { index, sliderBatch ->
-                val response = app.post(
-                    "${Companion.mainUrl}api/sliders/fetch?lang=$lang",
-                    requestBody = SliderFetchRequestBody(sliderBatch).toRequestBody(),
-                    headers = getSliderFetchHeaders()
-                )
-
-                val payload = response.body.string()
-                Log.d(TAG, "Slider fetch batch=${index + 1} status=${response.code} size=${sliderBatch.size}")
-                Log.d(TAG, "Slider fetch batch=${index + 1} preview=${payload.take(500)}")
-
-                allSections += parseSliderFetchSections(payload)
-            }
-
-        return allSections
-    }
 
     private fun isHtmlPayload(payload: String): Boolean {
         val trimmed = payload.trimStart()
@@ -168,55 +129,32 @@ class StreamingCommunity(
         return result.props.titles ?: emptyList()
     }
 
-    private fun parseHomeSections(payload: String): List<HomePageList> {
-        val jsonPayload = if (isHtmlPayload(payload)) {
-            extractInertiaPageJson(payload)
-        } else {
-            payload
-        } ?: return emptyList()
-
-        val result = parseInertiaPayload(jsonPayload, "Homepage") ?: return emptyList()
-        return result.props.sliders
-            ?.mapNotNull { slider ->
-                val items = searchResponseBuilder(slider.titles)
-                if (items.isEmpty()) return@mapNotNull null
-                HomePageList(
-                    name = slider.label.ifBlank { slider.name },
-                    list = items,
-                    isHorizontalImages = false
-                )
-            }.orEmpty()
-    }
-
-    private fun parseSliderFetchSections(payload: String): List<HomePageList> {
-        if (payload.isBlank()) return emptyList()
+    private fun parseSliderFetchSections(payload: String): HomePageList? {
+        if (payload.isBlank()) return null
         val trimmedPayload = payload.trimStart()
         if (trimmedPayload.startsWith("{") || trimmedPayload.contains("\"message\"")) {
             Log.e(
                 TAG,
                 "Sliders fetch: received error object instead of slider array: ${payload.take(300)}"
             )
-            return emptyList()
+            return null
         }
         if (isHtmlPayload(payload)) {
             Log.e(TAG, "Sliders fetch: expected JSON array but received HTML payload")
-            return emptyList()
+            return null
         }
 
-        val sliders = runCatching { parseJson<List<Slider>>(payload) }
+        val slider = runCatching { parseJson<List<Slider>>(payload) }
             .onFailure { Log.e(TAG, "Sliders fetch: invalid JSON payload - ${it.message}") }
-            .getOrNull()
-            ?: return emptyList()
-
-        return sliders.mapNotNull { slider ->
-            val items = searchResponseBuilder(slider.titles)
-            if (items.isEmpty()) return@mapNotNull null
-            HomePageList(
-                name = slider.label.ifBlank { slider.name },
-                list = items,
-                isHorizontalImages = false
-            )
-        }
+            .getOrNull()?.first()
+            ?: return null
+        val items = searchResponseBuilder(slider.titles)
+        if (items.isEmpty()) return null
+        return HomePageList(
+            name = slider.label.ifBlank { slider.name },
+            list = items,
+            isHorizontalImages = false
+        )
     }
 
     private suspend fun setupHeaders() {
@@ -225,7 +163,7 @@ class StreamingCommunity(
         response.cookies.forEach { cookieJar[it.key] = it.value }
 
         val csrfResponse = app.get(
-            "${Companion.mainUrl}sanctum/csrf-cookie",
+            "${siteRootUrl}sanctum/csrf-cookie",
             headers = mapOf(
                 "Referer" to "$mainUrl/",
                 "X-Requested-With" to "XMLHttpRequest"
@@ -254,44 +192,73 @@ class StreamingCommunity(
             "Referer" to "$mainUrl/",
             "Accept" to "application/json, text/plain, */*",
             "Content-Type" to "application/json",
-            "Origin" to Companion.mainUrl.removeSuffix("/")
+            "Origin" to siteRootUrl.removeSuffix("/")
         )
     }
 
     private fun searchResponseBuilder(listJson: List<Title>): List<SearchResponse> {
-        val domain = mainUrl.substringAfter("://").substringBeforeLast("/")
         val list: List<SearchResponse> =
             listJson.filter { it.type == "movie" || it.type == "tv" }.map { title ->
                 val url = "$mainUrl/titles/${title.id}-${title.slug}"
 
                 if (title.type == "tv") {
                     newTvSeriesSearchResponse(title.name, url) {
-                        posterUrl = "https://cdn.${domain}/images/" + title.getPoster()
+                        posterUrl = "https://$cdnHost/images/" + title.getPoster()
                     }
                 } else {
                     newMovieSearchResponse(title.name, url) {
-                        posterUrl = "https://cdn.$domain/images/" + title.getPoster()
+                        posterUrl = "https://$cdnHost/images/" + title.getPoster()
                     }
                 }
             }
         return list
     }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        if (page > 1) {
-            return newHomePageResponse(emptyList(), hasNext = false)
-        }
-
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         if (headers["Cookie"].isNullOrEmpty()) {
             setupHeaders()
         }
 
-        val lazySections = fetchSliderSectionsInBatches()
-        if (lazySections.isEmpty()) {
-            Log.d(TAG, "Lazy slider fetch returned no sections")
+        val hasNext = page < 17
+        when (request.name) {
+            "Slider" -> {
+                val slider = parseJson<SliderFetchRequestSlider>(request.data)
+                val body = "{\"sliders\":[${slider.toJson()}]}"
+                val response = app.post(
+                    "${siteRootUrl}api/sliders/fetch?lang=$lang",
+                    headers = getSliderFetchHeaders(),
+                    requestBody = body.toRequestBody()
+                )
+                val payload = response.body.string()
+                val r = parseSliderFetchSections(payload) ?: return null
+                return newHomePageResponse(r, hasNext = false)
+            }
+            "Genre" -> {
+                val genre = parseJson<GenreRequest>(request.data)
+                val response = app.get(
+                    "${siteRootUrl}$lang/archive",
+                    params = mapOf(
+                        "page" to page.toString(),
+                        "lang" to lang,
+                        "genre[]" to genre.id.toString()
+                    ),
+                    headers = getSliderFetchHeaders(),
+                )
+                val payload = response.body.string()
+                val data =
+                    tryParseJson<SearchResponse>(payload)?.data ?: return null
+                val name = if (lang == "en") genre.nameEN else genre.nameIT
+                return newHomePageResponse(
+                    HomePageList(
+                        name = name,
+                        list = searchResponseBuilder(data)
+                    ), hasNext = hasNext
+                )
+            }
+            else -> {
+                return null
+            }
         }
-
-        return newHomePageResponse(lazySections, hasNext = false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -318,8 +285,7 @@ class StreamingCommunity(
             val img = resp.select("img.poster.w-full").attr("srcset").split(", ").last()
             return img
         } else {
-            val domain = mainUrl.substringAfter("://").substringBeforeLast("/")
-            return title.getBackgroundImageId().let { "https://cdn.$domain/images/$it" }
+            return title.getBackgroundImageId().let { "https://$cdnHost/images/$it" }
         }
     }
 
@@ -412,7 +378,6 @@ class StreamingCommunity(
         val response = app.get(actualUrl, headers = headers)
         val responseBody = response.body.string()
 
-        val domain = mainUrl.substringAfter("://").substringBeforeLast("/")
         val props = parseJson<InertiaResponse>(responseBody).props
         val title = props.title!!
         val genres = title.genres.map { it.name.capitalize() }
@@ -441,7 +406,7 @@ class StreamingCommunity(
             ) {
                 this.posterUrl = poster
                 title.getBackgroundImageId()
-                    .let { this.backgroundPosterUrl = "https://cdn.$domain/images/$it" }
+                    .let { this.backgroundPosterUrl = "https://$cdnHost/images/$it" }
 
                 if (logoUrl != null) {
                     this.logoUrl = logoUrl
@@ -478,7 +443,7 @@ class StreamingCommunity(
             ) {
                 this.posterUrl = poster
                 title.getBackgroundImageId()
-                    .let { this.backgroundPosterUrl = "https://cdn.$domain/images/$it" }
+                    .let { this.backgroundPosterUrl = "https://$cdnHost/images/$it" }
 
                 if (logoUrl != null) {
                     this.logoUrl = logoUrl

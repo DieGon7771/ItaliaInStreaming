@@ -1,7 +1,29 @@
 package it.dogior.hadEnough
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
+data class GenreRequest(
+    val nameEN: String,
+    val nameIT: String,
+    val id: Int
+)
+
+data class SliderFetchRequestSlider(
+    val name: String,
+    val genre: String?
+)
+
+data class SliderFetchRequestBody(
+    val sliders: List<SliderFetchRequestSlider>
+) {
+    fun toRequestBody(): RequestBody {
+        return this.toJson().toRequestBody("application/json;charset=utf-8".toMediaType())
+    }
+}
 
 data class LoadData(
     val url: String,
@@ -9,12 +31,6 @@ data class LoadData(
     val tmdbId: Int? = null,
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
-)
-
-data class Section(
-    @JsonProperty("name") val name: String,
-    @JsonProperty("label") val label: String,
-    @JsonProperty("titles") val titles: List<Title>,
 )
 
 data class SearchResponse(
