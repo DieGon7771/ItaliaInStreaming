@@ -14,6 +14,7 @@ include(
     "CB01",
 //    "CorsaroNero",
 //    "DaddyLive",
+    "GuardaPlay",
     "GuardaSerie",
     "Huhu",
 //    "IlGenioDelloStreaming",
