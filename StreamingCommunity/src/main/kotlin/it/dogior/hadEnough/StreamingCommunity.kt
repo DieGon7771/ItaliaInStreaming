@@ -246,7 +246,7 @@ class StreamingCommunity(
                 )
                 val payload = response.body.string()
                 val data =
-                    tryParseJson<SearchResponse>(payload)?.data ?: return null
+                    tryParseJson<it.dogior.hadEnough.SearchResponse>(payload)?.data ?: return null
                 val name = if (lang == "en") genre.nameEN else genre.nameIT
                 return newHomePageResponse(
                     HomePageList(
