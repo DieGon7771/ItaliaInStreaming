@@ -288,9 +288,8 @@ class WatchPartyOverlay(
                 indeterminateTintList = android.content.res.ColorStateList.valueOf(0xFF4FC3F7.toInt())
             }
             val size = dp(activity, 42)
-            // mini-rotellina leggermente SOPRA quella nativa del player (che
-            // è al centro): non si sovrappongono più, e il colore azzurro la
-            // distingue come "attesa del plugin".
+            // rotellina del plugin: azzurra e leggermente sopra quella nativa
+            // del player (al centro), per non confonderle
             val height = decor.height
             val params = FrameLayout.LayoutParams(size, size).apply {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -367,7 +366,7 @@ class WatchPartyOverlay(
         ))
 
         val panel = run {
-            // larghezza 42% dello schermo (leggermente meno di prima)
+            // larghezza 42% dello schermo
             val panelWidth = (activity.window?.decorView?.width ?: 0 * 1) * 0.42f
             val w = if (panelWidth > 0) panelWidth.toInt() else (activity.resources.displayMetrics.widthPixels * 0.42f).toInt()
             val p = LinearLayout(activity).apply {
@@ -379,7 +378,6 @@ class WatchPartyOverlay(
                 setPadding(dp(activity, 12), dp(activity, 10), dp(activity, 12), dp(activity, 10))
             }
 
-            // header "Chat"
             val header = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -404,7 +402,6 @@ class WatchPartyOverlay(
             header.addView(closeBtn)
             p.addView(header)
 
-            // lista messaggi
             val scroll = ScrollView(activity).apply {
                 isFillViewport = true
                 layoutParams = LinearLayout.LayoutParams(
@@ -437,6 +434,21 @@ class WatchPartyOverlay(
                 setSingleLine(true)
                 maxLines = 1
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // "FINE"/invio della tastiera NON deve risalire all'activity come
+                // KEYCODE_ENTER (che in CloudStream toggla play/pausa): lo consumiamo
+                // qui e lo trasformiamo in invio del messaggio.
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_UNSPECIFIED
+                    ) {
+                        sendChat()
+                        true
+                    } else {
+                        false
+                    }
+                }
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
             chatInput = input
@@ -444,7 +456,9 @@ class WatchPartyOverlay(
                 setImageDrawable(getDrawable("send_icon"))
                 colorFilter = android.graphics.PorterDuffColorFilter(theme.accent, android.graphics.PorterDuff.Mode.SRC_IN)
                 isClickable = true
-                isFocusable = true
+                // NON focusable: se rubasse il focus all'EditText, la tastiera si
+                // chiuderebbe con un ENTER fantasma che toggla play/pausa in CloudStream
+                isFocusable = false
                 val s = dp(activity, 36)
                 layoutParams = LinearLayout.LayoutParams(s, s)
                 setPadding(dp(activity, 7), dp(activity, 7), dp(activity, 7), dp(activity, 7))
@@ -531,14 +545,20 @@ class WatchPartyOverlay(
         // The other person receives the text over the socket; we show it locally right away
         appendLocalBubble(me, text, mine = true)
         input.setText("")
+        // chiude la tastiera in sicurezza via InputMethodManager: nessun key event
+        // che risalirebbe al player (KEYCODE_ENTER toggla play/pausa in CloudStream)
+        runCatching {
+            val imm = input.context.getSystemService(Activity.INPUT_METHOD_SERVICE)
+                as? android.view.inputmethod.InputMethodManager
+            imm?.hideSoftInputFromWindow(input.windowToken, 0)
+        }
     }
 
     private fun appendLocalBubble(sender: String, text: String, mine: Boolean) {
         val list = chatMessages ?: return
         val activity = CommonActivity.activity ?: return
         val theme = chatTheme()
-        // messaggi consecutivi dello stesso mittente: niente nome ripetuto e
-        // bolle più vicine (un solo "Tu"/"Amico", poi solo le bolle)
+        // stesso mittente di fila: niente nome ripetuto e bolle più vicine
         val grouped = sender == lastGroupSender
         lastGroupSender = sender
         // distanza uniforme tra messaggi di fila: bottom SEMPRE 2dp, top 5dp

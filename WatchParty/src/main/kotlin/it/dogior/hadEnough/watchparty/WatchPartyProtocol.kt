@@ -18,28 +18,19 @@ data class MediaInfo(
 )
 
 /**
- * Unico envelope scambiato sul canale WebSocket.
- * Il server di relay non lo interpreta: si limita a inoltrarlo all'altro
- * peer nella stessa stanza (vedi WatchPartyServer/worker.js).
+ * Unico envelope scambiato sul canale WebSocket. Il relay non lo interpreta:
+ * si limita a inoltrarlo all'altro peer nella stessa stanza (vedi WatchPartyServer/worker.js).
  *
- * type possibili:
- *  - "PEER_JOINED" / "PEER_LEFT"  (generati dal server, non dal client)
- *  - "HELLO"       (name) — scambio del nome visualizzato, inviato all'apertura
- *  - "SYNC_REQUEST" / "SYNC_STATE"
- *  - "PLAY" / "PAUSE"
- *  - "SEEK"        (position, playing) — avvia il gate di attesa sincronizzata
- *    su entrambi i lati (vedi beginSeekGate in WatchPartyManager)
- *  - "READY"       — inviato da un lato quando ha finito di caricare dopo un seek
- *  - "CHAT"        (name, text) — un messaggio della chat; il relay lo inoltra
- *    ciecamente all'altro peer della stanza
- *  - "NEXT_EPISODE" — cambia episodio sul player dell'altro; può partirlo sia
- *    l'host sia il guest, se l'host glielo consente (permesso canNextEpisode)
- *  - "FORCE_SYNC"  (position, playing) — come SYNC_STATE ma applicato SEMPRE,
- *    usato dal pulsante "Risincronizza ora" (azione esplicita dell'utente)
- *  - "PERMISSIONS" (canPlayPause, canSeek, canNextEpisode) — l'host imposta
- *    cosa può fare il guest
- *  - "BUFFERING" / "READY"
- *  - "CHANGE_SOURCE" (url/title/referer/headers/quality/position/playing)
+ * type possibili (vedi WatchPartyManager.handleRemoteMessage):
+ *  - "PEER_JOINED" / "PEER_LEFT" — generati dal server, non dal client
+ *  - "HELLO"                     — scambio del nome visualizzato
+ *  - "SYNC_REQUEST" / "SYNC_STATE" — sincronizzazione periodica (host → guest)
+ *  - "FORCE_SYNC"                — risync esplicito dal pulsante "Risincronizza ora"
+ *  - "PLAY" / "PAUSE" / "SEEK"   — comandi di riproduzione (SEEK avvia il gate sincronizzato)
+ *  - "READY"                     — un lato ha finito di caricare dopo un seek
+ *  - "CHAT"                      — messaggio della chat (name, text)
+ *  - "EPISODE_HINT" / "NEXT_EPISODE" — cambio episodio: notifica morbida / comando
+ *  - "PERMISSIONS"               — permessi che l'host imposta per il guest
  *  - "LEAVE_ROOM"
  */
 @Serializable

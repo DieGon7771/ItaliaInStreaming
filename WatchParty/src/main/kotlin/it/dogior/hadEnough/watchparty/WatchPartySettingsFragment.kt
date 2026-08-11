@@ -18,7 +18,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.lagradost.cloudstream3.CloudStreamApp
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.plugins.Plugin
-import it.dogior.hadEnough.BuildConfig // namespace del modulo, vedi build.gradle.kts root
+import it.dogior.hadEnough.BuildConfig
 
 private const val TAG = "WatchParty"
 
