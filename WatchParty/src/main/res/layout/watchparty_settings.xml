@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="ltr">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        tools:background="@color/cardview_dark_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:text="Watch Party"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Card: stato connessione + partecipanti -->
+        <LinearLayout
+            android:id="@+id/wp_status_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/wp_status_dot"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@android:drawable/presence_offline" />
+
+                <TextView
+                    android:id="@+id/wp_status"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Open a video, then create a room or join with a PIN."
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/wp_participants_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- Card: PIN + copia (solo host) -->
+        <LinearLayout
+            android:id="@+id/wp_pin_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/wp_pin_display"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/wp_copy_pin"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="Copy the PIN"
+                android:padding="7dp" />
+
+        </LinearLayout>
+
+        <!-- Card: crea/unisciti (stato "non in stanza") -->
+        <LinearLayout
+            android:id="@+id/wp_join_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/wp_create"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Create room"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/wp_pin_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Enter your friend's PIN"
+                android:inputType="number"
+                android:maxLength="6" />
+
+            <TextView
+                android:id="@+id/wp_join"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Join room"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Card: azioni stanza attiva -->
+        <LinearLayout
+            android:id="@+id/wp_active_room_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/wp_episode_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/wp_next_episode"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="Next ep. ▶"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/wp_resync"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Resync now"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/wp_leave"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Leave room"
+                android:textAllCaps="false"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Sezione impostazioni: riga stile StreamITA, apre una pagina dedicata -->
+        <LinearLayout
+            android:id="@+id/wp_settings_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="68dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:alpha="0.8"
+                    android:text="Plugin preferences"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Open"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

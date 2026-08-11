@@ -25,6 +25,7 @@ include(
     "SyncStream",
     "TV",
 //    "ToonItalia",
-    "Torrentio"
+    "Torrentio",
+    "WatchParty",
 //    "YouTube"
 )

@@ -43,10 +43,12 @@ jobs:
         env:
           TMDB_API: ${{ secrets.TMDB_API }}
           TMDB_API3: ${{ secrets.TMDB_API3 }}
+          WATCHPARTY_RELAY: ${{ secrets.WATCHPARTY_RELAY }}
         run: |
           cd $GITHUB_WORKSPACE/src
           echo TMDB_API=$TMDB_API >> secrets.properties
           echo TMDB_API3=$TMDB_API3 >> secrets.properties
+          echo WATCHPARTY_RELAY=$WATCHPARTY_RELAY >> secrets.properties
 
       - name: Build Plugins
         env:

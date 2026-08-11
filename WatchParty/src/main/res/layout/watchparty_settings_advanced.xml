@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="ltr">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:text="Watch Party settings"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/wpa_options_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="52dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Invisible button in the player"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:alpha="0.6"
+                        android:text="Hides the button over the player but it stays clickable at the same position"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/wpa_invisible_button"
+                    android:layout_width="42dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="0dp"
+                    android:showText="false"
+                    android:switchMinWidth="28dp"
+                    android:text="" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:background="#33FFFFFF" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="52dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Invisible chat icon in the player"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:alpha="0.6"
+                        android:text="Hides the chat arrow but new messages still show the red dot"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/wpa_invisible_chat"
+                    android:layout_width="42dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="0dp"
+                    android:showText="false"
+                    android:switchMinWidth="28dp"
+                    android:text="" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="10dp"
+            android:text="Chat theme"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/wpa_theme_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/wpa_theme_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alpha="0.6"
+                android:text="Choose the bubble colors in the chat"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wpa_glow_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:minHeight="52dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Glow-style bubbles"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:alpha="0.6"
+                    android:text="Black bubbles with a border in the chosen color, like a neon sign"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/wpa_glow"
+                android:layout_width="42dp"
+                android:layout_height="wrap_content"
+                android:minHeight="0dp"
+                android:showText="false"
+                android:switchMinWidth="28dp"
+                android:text="" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
