@@ -113,6 +113,7 @@ class WatchPartySettingsFragment(
 
         val activeRoomCard = root.findView<View>("wp_active_room_card")
         val episodeRow = root.findView<View>("wp_episode_row")
+        val lockBtn = root.findView<TextView>("wp_lock_room")
         val nextEpisodeBtn = root.findView<TextView>("wp_next_episode")
         val leaveBtn = root.findView<TextView>("wp_leave")
         val resyncBtn = root.findView<TextView>("wp_resync")
@@ -129,12 +130,14 @@ class WatchPartySettingsFragment(
         resyncBtn.applyBlueBackground()
         leaveBtn.applyDangerBackground()   // azione distruttiva, rossa
         nextEpisodeBtn.applyOutlineBackground()
+        lockBtn.applyOutlineBackground()
         copyPinBtn.applyOutlineBackground()
         copyPinBtn.setImageDrawable(getDrawable("copy_icon"))
         settingsCard.applyOutlineBackground()
 
         settingsCard.setOnClickListener {
-            WatchPartyAdvancedSettingsFragment(plugin).show(parentFragmentManager, "WatchPartyAdvancedSettings")
+            WatchPartyAdvancedSettingsFragment(plugin, this@WatchPartySettingsFragment)
+                .show(parentFragmentManager, "WatchPartyAdvancedSettings")
         }
 
         // --- Editor permessi ospite (solo host) ---
@@ -170,7 +173,7 @@ class WatchPartySettingsFragment(
             val nextEpisodeSwitch = permissionRow("Can change episode", current.canNextEpisode)
 
             com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-                .setTitle("Permissions for ${manager.remotePeerName ?: "this participant"}")
+                .setTitle("Permissions for guests")
                 .setView(container)
                 .setPositiveButton("Save") { _, _ ->
                     manager.sendPermissionsToGuest(
@@ -187,7 +190,7 @@ class WatchPartySettingsFragment(
         }
 
         // --- Card partecipanti: cliccabile SOLO dall'host, SOLO sulla card dell'ospite ---
-        fun buildParticipantCard(label: String, editable: Boolean): View {
+        fun buildParticipantCard(label: String, editable: Boolean, cid: String? = null): View {
             val row = android.widget.LinearLayout(root.context).apply {
                 orientation = android.widget.LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
@@ -198,6 +201,29 @@ class WatchPartySettingsFragment(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { topMargin = marginPx; bottomMargin = marginPx }
                 background = getDrawable("outline") ?: coloredFallback(0x12FFFFFF.toInt(), 0x88FFFFFF.toInt())
+            }
+            // Kick: solo l'host lo vede, a sinistra del nome
+            if (editable && cid != null) {
+                val kick = TextView(root.context).apply {
+                    text = "✕"
+                    textSize = 16f
+                    setTextColor(0xFFFF6B6B.toInt())
+                    setPadding(0, 0, (12 * resources.displayMetrics.density).toInt(), 0)
+                    isClickable = true
+                    isFocusable = true
+                }
+                kick.setOnClickListener {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+                        .setTitle("Kick participant")
+                        .setMessage("Remove ${label.replace(" (Host)", "")} from the room?")
+                        .setPositiveButton("Kick") { _, _ ->
+                            manager.kickParticipant(cid)
+                            showToast("Participant kicked")
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+                row.addView(kick)
             }
             val nameView = TextView(root.context).apply {
                 text = label
@@ -216,6 +242,21 @@ class WatchPartySettingsFragment(
                 row.isClickable = true
                 row.isFocusable = true
                 row.setOnClickListener { showPermissionsEditor() }
+                // long-press = promuovi a host (come il kick, con conferma)
+                row.setOnLongClickListener {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(root.context)
+                        .setTitle("Promote participant")
+                        .setMessage("Make ${label.replace(" (Host)", "")} the new host?")
+                        .setPositiveButton("Promote") { _, _ ->
+                            cid?.let {
+                                manager.promoteParticipant(it)
+                                showToast("Host changed")
+                            }
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    true
+                }
             }
             return row
         }
@@ -231,16 +272,19 @@ class WatchPartySettingsFragment(
             val meLabel = if (manager.role == WatchPartyManager.Role.HOST) "$me (Host, You)" else "$me (You)"
             participantsContainer.addView(buildParticipantCard(meLabel, editable = false))
 
-            val peerName = manager.remotePeerName
-            if (peerName != null) {
-                val isHost = manager.role == WatchPartyManager.Role.HOST
-                val peerLabel = if (isHost) peerName else "$peerName (Host)"
-                // editabile solo se IO sono host (i permessi si impostano sull'ospite)
-                participantsContainer.addView(buildParticipantCard(peerLabel, editable = isHost))
-            } else {
+            val roster = manager.participants
+            if (roster.isEmpty()) {
                 participantsContainer.addView(
-                    buildParticipantCard("Waiting for a participant…", editable = false)
+                    buildParticipantCard("Waiting for participants…", editable = false)
                 )
+                return
+            }
+            // editabile solo se IO sono host (i permessi si impostano sugli ospiti)
+            val editable = manager.role == WatchPartyManager.Role.HOST
+            for (p in roster) {
+                val isPeerHost = p.cid == manager.currentHostCid
+                val label = if (isPeerHost) "${p.name} (Host)" else p.name
+                participantsContainer.addView(buildParticipantCard(label, editable = editable, cid = p.cid))
             }
         }
 
@@ -253,6 +297,9 @@ class WatchPartySettingsFragment(
             // glielo consente (canNextEpisode)
             val canEpisode = isHost || manager.myPermissions.canNextEpisode
             episodeRow.visibility = if (inRoom && canEpisode) View.VISIBLE else View.GONE
+            // lucchetto: solo l'host, icona aggiornata sullo stato reale della stanza
+            lockBtn.visibility = if (inRoom && isHost) View.VISIBLE else View.GONE
+            lockBtn.text = if (manager.roomLocked) "🔒" else "🔓"
             pinCard.visibility = if (inRoom && isHost) View.VISIBLE else View.GONE
             if (inRoom && isHost) {
                 pinDisplay.text = manager.currentPin
@@ -295,7 +342,7 @@ class WatchPartySettingsFragment(
             }
             val pin = manager.createRoom()
             pinDisplay.text = pin
-            status.text = "Share this PIN with your friend. They need to open the same video."
+            status.text = "Share this PIN with your friends. They need to open the same video."
             refreshUiForActiveRoom()
         }
 
@@ -313,7 +360,7 @@ class WatchPartySettingsFragment(
                 return@setOnClickListener
             }
             if (!PlayerAccess.isPlayerScreenActive()) {
-                showToast("Open the same video as your friend first")
+                showToast("Open the same video as your friends first")
                 return@setOnClickListener
             }
             manager.joinRoom(pin)
@@ -332,6 +379,13 @@ class WatchPartySettingsFragment(
         }
 
         nextEpisodeBtn.setOnClickListener { manager.goToNextEpisode() }
+
+        lockBtn.setOnClickListener {
+            val target = !manager.roomLocked
+            manager.setRoomLock(target)
+            lockBtn.text = if (target) "🔒" else "🔓"
+            showToast(if (target) "Room locked" else "Room unlocked")
+        }
 
         refreshUiForActiveRoom()
 

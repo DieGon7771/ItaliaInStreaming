@@ -21,7 +21,7 @@ private const val TAG = "WatchParty"
 /**
  * Popup informativo mostrato una sola volta: spiega che i comandi di
  * riproduzione (play/pausa/posizione) passano attraverso un relay esterno
- * (il Cloudflare Worker) per essere inoltrati all'altro utente della stanza.
+ * (il Cloudflare Worker) per essere inoltrati agli altri utenti della stanza.
  *
  * Usa MaterialAlertDialogBuilder (non il semplice AlertDialog) apposta:
  * eredita automaticamente lo stile Material dell'app — angoli arrotondati,

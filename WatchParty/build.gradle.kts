@@ -15,7 +15,7 @@ dependencies {
 }
 
 
-version = 2
+version = 3
 
 android {
     defaultConfig {
@@ -47,6 +47,6 @@ cloudstream {
     )
 
     iconUrl = "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/WatchParty/WatchParty_icon.png"
-    description = "⚠️ BETA ⚠️ Watch movies and TV series together in real-time with live chat (Max 2 users for now)."
+    description = "⚠️ BETA ⚠️ Watch movies and TV series together in real-time with live chat (Up to 5 users)."
     requiresResources = true
 }

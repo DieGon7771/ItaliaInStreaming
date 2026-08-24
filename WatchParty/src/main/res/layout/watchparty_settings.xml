@@ -117,7 +117,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="Enter your friend's PIN"
+                android:hint="Enter the room PIN"
                 android:inputType="number"
                 android:maxLength="6" />
 
@@ -154,8 +154,21 @@
                 android:visibility="gone">
 
                 <TextView
+                    android:id="@+id/wp_lock_room"
+                    android:layout_width="48dp"
+                    android:layout_height="50dp"
+                    android:layout_marginRight="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="🔒"
+                    android:textSize="20sp"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/wp_next_episode"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="50dp"
                     android:clickable="true"
                     android:focusable="true"

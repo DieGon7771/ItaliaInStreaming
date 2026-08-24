@@ -16,6 +16,15 @@ data class BackupFile(
     @JsonProperty("settings") val settings: BackupVars
 )
 
+/**
+ * Contenuto salvato nel draft issue (base64). "updatedAt" (epoch ms) serve a
+ * decidere qual è il backup più recente ed evitare di applicare dati vecchi.
+ */
+data class SyncEnvelope(
+    @JsonProperty("updatedAt") val updatedAt: Long,
+    @JsonProperty("backup") val backup: BackupFile
+)
+
 data class APIRes(
     @JsonProperty("data") var data: Data?,
     @JsonProperty("errors") var errors: Array<Error>?,
@@ -38,9 +47,11 @@ data class APIRes(
                         @JsonProperty("content") var content: Content
                     ) {
                         data class Content(
-                            @JsonProperty("id") var id: String,
-                            @JsonProperty("title") var title: String,
-                            @JsonProperty("bodyText") var bodyText: String,
+                            @JsonProperty("id") var id: String? = null,
+                            @JsonProperty("__typename") var typeName: String? = null,
+                            @JsonProperty("title") var title: String? = null,
+                            @JsonProperty("bodyText") var bodyText: String? = null,
+                            @JsonProperty("updatedAt") var updatedAt: String? = null,
                         )
                     }
                 }
@@ -68,5 +79,6 @@ data class SyncDevice(
     @JsonProperty("name") var name: String,
     @JsonProperty("deviceId") var deviceId: String,
     @JsonProperty("itemId") var itemId: String,
-    @JsonProperty("syncedData") var syncedData: String? = null
+    @JsonProperty("syncedData") var syncedData: String? = null,
+    @JsonProperty("updatedAt") var updatedAt: Long = 0L
 )

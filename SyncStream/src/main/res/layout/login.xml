@@ -1,63 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp">
+
+        <TextView
+            android:id="@+id/header_tw"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="Login"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/save_btn"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@android:color/transparent"
+            android:contentDescription="Salva"
+            android:focusable="true" />
+    </RelativeLayout>
 
     <LinearLayout
+        android:id="@+id/creds_card"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="25dp"
-        android:layout_marginLeft="25dp"
-        android:layout_marginRight="25dp"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:padding="14dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Token Github"
-            android:textSize="18sp" />
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:text="Token GitHub"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/token"
-            android:layout_height="wrap_content"
             android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:padding="5dp"
-            android:layout_marginBottom="10dp"
-            android:inputType="text" />
+            android:layout_marginTop="4dp"
+            android:inputType="text"
+            android:hint="ghp_..." />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
             android:text="Numero del progetto"
-            android:textSize="18sp" />
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/project_num"
-            android:layout_height="wrap_content"
             android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:padding="5dp"
-            android:layout_marginBottom="10dp"
-            android:inputType="number" />
+            android:layout_marginTop="4dp"
+            android:inputType="number"
+            android:hint="1" />
 
         <Switch
             android:id="@+id/backup_device"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Backup dei dati sul cloud"
             android:textSize="17sp"
             android:padding="5dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginTop="10dp"
             android:focusable="true" />
 
         <Switch
             android:id="@+id/restore_device"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Recupera dati dal cloud"
             android:textSize="17sp"
             android:padding="5dp"
             android:layout_marginBottom="10dp"
             android:focusable="true" />
-
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/reset_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minHeight="48dp"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="12dp"
+        android:text="RIMUOVI CREDENZIALI"
+        android:textStyle="bold" />
 </LinearLayout>

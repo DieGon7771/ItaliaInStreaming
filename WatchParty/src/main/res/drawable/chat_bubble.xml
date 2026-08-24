@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icona chat: un solo fumetto pieno, bianco, con i 3 puntini "bucati"
+    (fillType evenOdd => trasparenti, lasciano vedere il cerchio nero
+    semi-trasparente dietro, invece di puntini bianchi pieni).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@android:color/white">
+
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="M8,1 H16 A7,7 0 1 1 16,15 H13 L5,21 L9,15 H8 A7,7 0 1 1 8,1 Z
+                           M5.4,8 A1.6,1.6 0 1 0 8.6,8 A1.6,1.6 0 1 0 5.4,8 Z
+                           M10.4,8 A1.6,1.6 0 1 0 13.6,8 A1.6,1.6 0 1 0 10.4,8 Z
+                           M15.4,8 A1.6,1.6 0 1 0 18.6,8 A1.6,1.6 0 1 0 15.4,8 Z" />
+
+</vector>

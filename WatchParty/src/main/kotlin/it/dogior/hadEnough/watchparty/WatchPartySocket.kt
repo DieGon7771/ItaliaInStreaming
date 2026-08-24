@@ -13,15 +13,20 @@ import java.util.concurrent.TimeUnit
  * Puro Kotlin/Java: nessuna libreria nativa, quindi caricabile senza problemi
  * dal PathClassLoader a 2 argomenti usato da PluginManager per i file .cs3.
  *
- * Il server raggruppa i client per "pin" (max 2 per stanza) e inoltra
- * ciecamente ogni messaggio testuale all'altro peer connesso.
+ * Il server raggruppa i client per "pin" (max 5 per stanza) e inoltra
+ * ciecamente ogni messaggio testuale a tutti gli altri peer connessi.
+ *
+ * Ogni client passa il proprio cid (UUID) come query string: il server lo usa
+ * per tracciare roster/ordine e l'host migration. Il cid viene iniettato in
+ * ogni messaggio in uscita (message.copy), così chi riceve sa sempre il mittente.
  */
 class WatchPartySocket(
     private val baseWsUrl: String, // es. "wss://tuoworker.workers.dev/room"
+    private val clientId: String,
     private val onOpen: () -> Unit,
     private val onMessage: (WatchPartyMessage) -> Unit,
-    private val onClosed: () -> Unit,
-    private val onFailure: (Throwable) -> Unit,
+    private val onClosed: (code: Int, reason: String) -> Unit,
+    private val onFailure: (Throwable, okhttp3.Response?) -> Unit,
 ) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -37,7 +42,7 @@ class WatchPartySocket(
 
     fun connect(pin: String) {
         val request = Request.Builder()
-            .url("$baseWsUrl/$pin")
+            .url("$baseWsUrl/$pin?cid=$clientId")
             .build()
 
         socket = client.newWebSocket(request, object : WebSocketListener() {
@@ -52,7 +57,7 @@ class WatchPartySocket(
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                onClosed()
+                onClosed(code, reason)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -60,7 +65,7 @@ class WatchPartySocket(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                onFailure(t)
+                onFailure(t, response)
             }
         })
     }
@@ -68,7 +73,7 @@ class WatchPartySocket(
     fun send(message: WatchPartyMessage) {
         val ws = socket ?: return
         runCatching {
-            ws.send(json.encodeToString(WatchPartyMessage.serializer(), message))
+            ws.send(json.encodeToString(WatchPartyMessage.serializer(), message.copy(cid = clientId)))
         }
     }
 
