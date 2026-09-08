@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 18
+version = 19
 
 
 cloudstream {
@@ -7,7 +7,7 @@ cloudstream {
     // All of these properties are optional, you can safely remove them
 
      description = "Live streams da CalcioStreaming"
-    authors = listOf("doGior","DieGon")
+    authors = listOf("DieGon")
 
     /**
      * Status int as the following:
