@@ -58,19 +58,23 @@ subprojects {
             minSdk = 21
         }
 
+        buildFeatures {
+            coreLibraryDesugaring = true
+        }
+
         lint {
             targetSdk = 35
         }
 
         compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
+            sourceCompatibility = JavaVersion.VERSION_11
+            targetCompatibility = JavaVersion.VERSION_11
         }
 
 
         tasks.withType<KotlinJvmCompile> {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8)
+                jvmTarget.set(JvmTarget.JVM_11)
                 freeCompilerArgs.addAll(
                     "-Xno-call-assertions",
                     "-Xno-param-assertions",
@@ -99,6 +103,9 @@ subprojects {
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
         implementation("com.github.vidstige:jadb:v1.2.1")
         implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
+
+        // Core library desugaring for JVM 11 with minSdk 21
+        coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     }
 }
 
