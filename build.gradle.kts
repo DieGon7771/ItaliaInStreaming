@@ -46,7 +46,7 @@ subprojects {
 
     cloudstream {
         setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/DieGon7771/ItaliaInStreaming")
-        authors = listOf("Phisher98")
+        authors = listOf("DieGon")
     }
 
     android {
@@ -57,8 +57,6 @@ subprojects {
         defaultConfig {
             minSdk = 21
         }
-
-        coreLibraryDesugaringEnabled = true
 
         lint {
             targetSdk = 35
