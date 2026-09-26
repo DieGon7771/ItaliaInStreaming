@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
@@ -22,7 +23,7 @@ import it.dogior.hadEnough.BuildConfig
 
 private const val TAG = "WatchParty"
 
-class WatchPartySettingsFragment(
+class WatchPartySettingsFragmentCloudStream(
     private val plugin: Plugin,
     private val manager: WatchPartyManager,
 ) : BottomSheetDialogFragment() {
@@ -41,12 +42,12 @@ class WatchPartySettingsFragment(
     /** Stesso pattern di StreamITA: risoluzione a runtime dei drawable del plugin per nome. */
     private fun getDrawable(name: String): Drawable? {
         val res = plugin.resources ?: run {
-            android.util.Log.e(TAG, "❌ getDrawable('$name'): plugin.resources è null")
+            android.util.Log.e(TAG, "getDrawable('$name'): plugin.resources è null")
             return null
         }
         val id = res.getIdentifier(name, "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
         if (id == 0) {
-            android.util.Log.e(TAG, "❌ getDrawable('$name'): risorsa non trovata (id=0) — controlla che il file esista in res/drawable/$name.xml")
+            android.util.Log.e(TAG, "getDrawable('$name'): risorsa non trovata (id=0)")
             return null
         }
         return ResourcesCompat.getDrawable(res, id, null)
@@ -72,7 +73,7 @@ class WatchPartySettingsFragment(
      * costruiamo comunque il colore giusto via codice invece di lasciare il tema di
      * default dell'app (che è blu — era la causa del pulsante "Esci" apparso blu). */
     private fun coloredFallback(fill: Int, stroke: Int): Drawable {
-        android.util.Log.e(TAG, "⚠️ Uso il fallback colorato via codice (il drawable del plugin non si è caricato)")
+        android.util.Log.e(TAG, "Uso il fallback colorato via codice (il drawable del plugin non si è caricato)")
         return android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
             cornerRadius = 8 * resources.displayMetrics.density
@@ -93,8 +94,6 @@ class WatchPartySettingsFragment(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? = try {
-        android.util.Log.d(TAG, "📄 onCreateView() inizio")
-
         val root = getLayout("watchparty_settings", inflater, container)
 
         val statusCard = root.findView<View>("wp_status_card")
@@ -136,7 +135,7 @@ class WatchPartySettingsFragment(
         settingsCard.applyOutlineBackground()
 
         settingsCard.setOnClickListener {
-            WatchPartyAdvancedSettingsFragment(plugin, this@WatchPartySettingsFragment)
+            WatchPartyAdvancedSettingsFragmentCloudStream(plugin, this@WatchPartySettingsFragmentCloudStream)
                 .show(parentFragmentManager, "WatchPartyAdvancedSettings")
         }
 
@@ -149,7 +148,7 @@ class WatchPartySettingsFragment(
                 setPadding(pad, pad / 2, pad, 0)
             }
 
-            fun permissionRow(title: String, checked: Boolean): android.widget.Switch {
+            fun permissionRow(title: String, checked: Boolean): () -> Boolean {
                 val row = android.widget.LinearLayout(ctx).apply {
                     orientation = android.widget.LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER_VERTICAL
@@ -160,17 +159,19 @@ class WatchPartySettingsFragment(
                     textSize = 14f
                     layoutParams = android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
-                val switch = android.widget.Switch(ctx).apply { isChecked = checked }
+                val toggleHost = FrameLayout(ctx)
+                var currentChecked = checked
+                mountToggle(toggleHost, checked) { newChecked -> currentChecked = newChecked }
                 row.addView(label)
-                row.addView(switch)
+                row.addView(toggleHost)
                 container.addView(row)
-                return switch
+                return { currentChecked }
             }
 
             val current = manager.guestPermissions
-            val playPauseSwitch = permissionRow("Can play/pause", current.canPlayPause)
-            val seekSwitch = permissionRow("Can seek", current.canSeek)
-            val nextEpisodeSwitch = permissionRow("Can change episode", current.canNextEpisode)
+            val playPauseChecked = permissionRow("Can play/pause", current.canPlayPause)
+            val seekChecked = permissionRow("Can seek", current.canSeek)
+            val nextEpisodeChecked = permissionRow("Can change episode", current.canNextEpisode)
 
             com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
                 .setTitle("Permissions for guests")
@@ -178,9 +179,9 @@ class WatchPartySettingsFragment(
                 .setPositiveButton("Save") { _, _ ->
                     manager.sendPermissionsToGuest(
                         ParticipantPermissions(
-                            canPlayPause = playPauseSwitch.isChecked,
-                            canSeek = seekSwitch.isChecked,
-                            canNextEpisode = nextEpisodeSwitch.isChecked,
+                            canPlayPause = playPauseChecked(),
+                            canSeek = seekChecked(),
+                            canNextEpisode = nextEpisodeChecked(),
                         )
                     )
                     showToast("Permissions updated")
@@ -404,10 +405,9 @@ class WatchPartySettingsFragment(
         val innerContainer = (root as? ViewGroup)?.getChildAt(0) as? ViewGroup
         innerContainer?.addView(consentLabel)
 
-        android.util.Log.d(TAG, "🏁 onCreateView() completato")
         root
     } catch (e: Exception) {
-        android.util.Log.e(TAG, "💥 ECCEZIONE in onCreateView()", e)
+        android.util.Log.e(TAG, "Eccezione in onCreateView()", e)
         null
     }
 }

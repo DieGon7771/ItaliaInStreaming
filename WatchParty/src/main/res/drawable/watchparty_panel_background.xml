@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sfondo dei fogli impostazioni e dei dialog di conferma: stesso identico
+    nero pieno + raggio 16dp del pannello chat (WatchPartyOverlay.kt,
+    bubbleBackground/chat panel), così tutto il plugin resta coerente anche
+    senza Material Components (che dava questo aspetto automaticamente
+    prima, ma non è affidabile su ogni host — vedi NUVIO_COMPATIBILITY_NOTES.md).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FF000000" />
+    <corners android:radius="16dp" />
+</shape>

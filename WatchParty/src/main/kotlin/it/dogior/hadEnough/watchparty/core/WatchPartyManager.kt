@@ -2,9 +2,7 @@ package it.dogior.hadEnough.watchparty
 
 import android.os.Handler
 import android.os.Looper
-import com.lagradost.cloudstream3.ui.player.CSPlayerEvent
-import com.lagradost.cloudstream3.ui.player.IPlayer
-import com.lagradost.cloudstream3.ui.player.PlayerEventSource
+import com.lagradost.cloudstream3.CloudStreamApp
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import it.dogior.hadEnough.BuildConfig
 import kotlinx.coroutines.CoroutineScope
@@ -36,24 +34,21 @@ data class WatchPartyParticipant(
 /**
  * Gestisce una Watch Party fino a 5 utenti su un canale WebSocket di relay.
  *
- * A differenza della versione "fork" (che agganciava un listener diretto
- * sul player interno), qui lo stato locale viene rilevato via POLLING
- * pubblico (player.getPosition()/getIsPlaying()), perché un plugin non può
- * registrarsi sull'event bus interno di PlayerView senza modificare l'app.
+ * Stato locale rilevato via POLLING (non un listener sul player interno,
+ * un plugin non può agganciarsi al suo event bus). Prevenzione loop: un
+ * comando remoto applicato marca `lastRemoteCommandMs`, il polling ignora
+ * le variazioni entro ECHO_WINDOW_MS da quel momento.
  *
- * Prevenzione loop: quando applichiamo un comando remoto (seekTo/handleEvent
- * con source = Sync) marchiamo `lastRemoteCommandMs`. Il polling ignora ogni
- * variazione di stato avvenuta entro ECHO_WINDOW_MS da quel momento, così
- * non la re-invia agli altri peer.
+ * Multi-peer: il server traccia cid/seq/hostCid; alla promozione di un
+ * nuovo host (HOST_CHANGED) ci si allinea al ruolo indicato.
  *
- * Multi-peer: il server traccia identità (cid), ordine di ingresso (seq) e chi
- * è l'host (hostCid). Quando l'host esce, il server promuove il più "vecchio"
- * tra i rimanenti e lo comunica con hostCid: qui ci allineiamo al ruolo indicato.
+ * LIMITE NOTO: il cambio episodio non è propagabile automaticamente
+ * (nessun host espone un metodo pubblico per caricare un URL): si invia
+ * solo "EPISODE_HINT" col titolo, l'utente cambia a mano.
  *
- * LIMITE NOTO: il cambio di episodio/sorgente non viene propagato
- * automaticamente (IPlayer non espone un metodo pubblico per caricare un
- * nuovo URL). Viene solo inviata una notifica "EPISODE_HINT" col titolo,
- * gli altri utenti devono cambiare episodio manualmente.
+ * Il player si raggiunge sempre tramite WatchPartyPlayback (vedi
+ * WatchPartyPlaybackBridge.kt): questa classe non conosce mai
+ * IPlayer/CSPlayerEvent direttamente.
  */
 class WatchPartyManager {
 
@@ -64,11 +59,10 @@ class WatchPartyManager {
 
     companion object {
         const val MAX_PARTICIPANTS = 5
-        private const val POLL_INTERVAL_MS = 200L
-        // Basta coprire il primo tick dopo aver applicato un comando remoto:
-        // da lì in poi lastKnownPosition riflette già il nuovo valore, quindi
-        // non serve una finestra lunga (era 900ms, bloccava click legittimi).
-        private const val ECHO_WINDOW_MS = 500L
+        /** Leggibile/scrivibile da Impostazioni avanzate ("Sync polling"); riletta ad ogni ciclo. */
+        fun pollIntervalMs(): Long =
+            CloudStreamApp.getKey<String>("wp_poll_interval_ms")?.toLongOrNull()?.coerceIn(50L, 400L) ?: 200L
+        private const val ECHO_WINDOW_MS = 500L // copre solo il tick subito dopo un comando remoto
         private const val SEEK_JUMP_THRESHOLD_MS = 1200L
         private const val RESYNC_THRESHOLD_MS = 1500L
         private const val HEARTBEAT_INTERVAL_MS = 6000L
@@ -76,13 +70,9 @@ class WatchPartyManager {
         private const val RECONNECT_BASE_DELAY_MS = 1000L
         private const val RECONNECT_MAX_DELAY_MS = 15000L
         private const val GATE_SAFETY_TIMEOUT_MS = 9000L
-        // tempo di buffering presunto dopo un seek: scaduto questo, il lato
-        // locale si dichiara pronto (READY) e il resolve aspetta gli altri peer
-        private const val LOCAL_SEEK_READY_MS = 900L
+        private const val LOCAL_SEEK_READY_MS = 900L // buffering presunto dopo un seek prima di mandare READY
 
-        /** Endpoint del server di relay. Vedi WatchPartyServer/ per l'implementazione di riferimento.
-         *  Il valore viene iniettato a build-time dal secret WATCHPARTY_RELAY (GitHub Actions), così
-         *  l'URL non compare nel sorgente. */
+        /** Endpoint del relay, iniettato a build-time dal secret WATCHPARTY_RELAY (GitHub Actions). */
         val DEFAULT_RELAY_URL: String = BuildConfig.WATCHPARTY_RELAY
     }
 
@@ -119,10 +109,8 @@ class WatchPartyManager {
 
     private val participantsMap = LinkedHashMap<String, Participant>()
 
-    /** cid che hanno appena fatto PEER_JOINED ma di cui non ho ancora il nome (HELLO).
-     *  Consumato al primo HELLO: è lì che emetto la bolla "X entered the room",
-     *  solo per chi era GIÀ in stanza. Chi era già dentro prima di me arriva via
-     *  ROOM_STATE e non va annunciato. */
+    /** cid entrati (PEER_JOINED) di cui non ho ancora il nome: consumato al primo
+     *  HELLO, dove emetto la bolla "X entered the room" (solo per chi era già dentro). */
     private val pendingJoinCids = mutableSetOf<String>()
 
     /** Dato interno di roster: seq non è aggiornato ai reconnect, resta l'ordine originale. */
@@ -157,10 +145,21 @@ class WatchPartyManager {
 
     val isConnected: Boolean get() = socket?.isOpen == true
 
-    /** Nome del profilo CloudStream locale attivo, o "Guest" se non trovato. */
+    /**
+     * Nome del profilo locale attivo, o "Guest" se non trovato.
+     * CloudStream: DataStoreHelper. Nuvio: NuvioProfileName (reflection,
+     * DataStoreHelper non esiste su quell'host) — dettagli lì.
+     */
     fun localDisplayName(): String {
-        val account = DataStoreHelper.accounts.find { it.keyIndex == DataStoreHelper.selectedKeyIndex }
-        return account?.name?.takeIf { it.isNotBlank() } ?: "Guest"
+        val cloudStreamName = runCatching {
+            val account = DataStoreHelper.accounts.find { it.keyIndex == DataStoreHelper.selectedKeyIndex }
+            account?.name?.takeIf { it.isNotBlank() }
+        }.getOrNull()
+        if (cloudStreamName != null) return cloudStreamName
+
+        NuvioProfileName.currentName()?.let { return it }
+
+        return "Guest"
     }
 
     private var socket: WatchPartySocket? = null
@@ -256,7 +255,7 @@ class WatchPartyManager {
     private fun connectSocket(pin: String) {
         connectionState = if (reconnectAttempt > 0) ConnectionState.RICONNESSIONE_IN_CORSO
         else ConnectionState.CONNESSIONE_IN_CORSO
-        peerPresent = false // non sappiamo ancora se c'è qualcun altro, lo scopriremo dai messaggi
+        peerPresent = false
 
         socket = WatchPartySocket(
             baseWsUrl = relayUrl,
@@ -266,8 +265,6 @@ class WatchPartyManager {
                     reconnectAttempt = 0
                     connectionState = ConnectionState.CONNESSO
                     onStatusText?.invoke("Connected to the server, waiting for other participants…")
-                    // annuncia il nostro nome; chi è già in stanza risponderà a sua volta
-                    // (vedi handleRemoteMessage) e sapremo che c'è
                     socket?.send(WatchPartyMessage(type = "HELLO", name = localDisplayName()))
                     if (role == Role.GUEST) socket?.send("SYNC_REQUEST")
                 }
@@ -276,7 +273,6 @@ class WatchPartyManager {
             onClosed = { code, reason ->
                 mainHandler.post {
                     if (reason == "kicked") {
-                        // espulsi dall'host: niente riconnessione, si esce dalla stanza
                         onStatusText?.invoke("You were kicked by the host")
                         shouldStayConnected = false
                         release()
@@ -290,13 +286,11 @@ class WatchPartyManager {
             onFailure = { t, response ->
                 mainHandler.post {
                     when (response?.code) {
-                        409 -> {
-                            // stanza piena: riprovare non serve, fermiamo il loop di reconnect
+                        409 -> { // stanza piena, non ha senso riprovare
                             shouldStayConnected = false
                             onStatusText?.invoke("The room is full (max $MAX_PARTICIPANTS people)")
                         }
-                        403 -> {
-                            // stanza bloccata dall'host: fermiamo il loop di reconnect
+                        403 -> { // stanza bloccata dall'host, non ha senso riprovare
                             shouldStayConnected = false
                             onStatusText?.invoke("The room is locked by the host")
                         }
@@ -337,7 +331,7 @@ class WatchPartyManager {
         pollJob?.cancel()
         pollJob = scope.launch {
             while (isActive) {
-                delay(POLL_INTERVAL_MS)
+                delay(pollIntervalMs())
                 withContext(Dispatchers.Main) { pollLocalPlayer() }
             }
         }
@@ -356,14 +350,12 @@ class WatchPartyManager {
 
     private fun pollLocalPlayer() {
         if (role == Role.IDLE || !isConnected) return
-        val player = PlayerAccess.currentPlayer() ?: return
+        if (!WatchPartyPlayback.isPlayerScreenActive()) return
 
-        val playing = player.getIsPlaying()
-        val position = player.getPosition() ?: return
+        val playing = WatchPartyPlayback.getIsPlaying()
+        val position = WatchPartyPlayback.getPosition() ?: return
 
-        // ignora SOLO il tick immediatamente successivo a un comando che abbiamo
-        // applicato noi da remoto (evita di rimandarlo indietro come se fosse
-        // un'azione dell'utente locale). Non blocca i tick successivi.
+        // ignora solo il tick subito dopo un comando applicato da remoto
         val withinEchoWindow = System.currentTimeMillis() - lastRemoteCommandMs < ECHO_WINDOW_MS
 
         val prevPlaying = lastKnownPlaying
@@ -374,31 +366,27 @@ class WatchPartyManager {
         if (withinEchoWindow) return
         if (prevPlaying == null) return // primo tick, solo inizializza
 
-        // seek: salto di posizione più grande di quanto ci si aspetterebbe dal solo
-        // scorrere del tempo tra un tick e l'altro. Ogni tick è valutato in modo
-        // indipendente: click ravvicinati ma su tick diversi vengono inviati tutti.
-        val expectedDrift = POLL_INTERVAL_MS + 400L
+        // seek: salto di posizione più grande di quanto spiegherebbe il solo
+        // scorrere del tempo tra un tick e l'altro
+        val expectedDrift = pollIntervalMs() + 400L
         if (abs(position - prevPosition) > expectedDrift.coerceAtLeast(SEEK_JUMP_THRESHOLD_MS)) {
             if (role == Role.GUEST && !myPermissions.canSeek) {
                 revertUnauthorizedLocalChange(prevPosition, prevPlaying)
                 return
             }
-            // Piccolo debounce: se l'utente ha appena fatto seek e sta per premere
-            // play (o l'ha già premuto un istante prima), aspettiamo un tick in più
-            // e rileggiamo lo stato al momento dell'invio, invece di fidarci dello
-            // stato letto nell'istante esatto del salto. Evita di spedire un SEEK
-            // con playing=false quando in realtà l'utente ha già premuto play.
+            // piccolo debounce: se l'utente sta per premere play subito dopo il seek,
+            // rileggiamo lo stato al momento dell'invio invece di fidarci di quello
+            // letto nell'istante esatto del salto
             scope.launch {
                 delay(SEEK_SEND_DEBOUNCE_MS)
                 withContext(Dispatchers.Main) {
-                    val p = PlayerAccess.currentPlayer() ?: return@withContext
-                    val finalPos = p.getPosition() ?: position
-                    val finalPlaying = p.getIsPlaying()
+                    if (!WatchPartyPlayback.isPlayerScreenActive()) return@withContext
+                    val finalPos = WatchPartyPlayback.getPosition() ?: position
+                    val finalPlaying = WatchPartyPlayback.getIsPlaying()
                     lastKnownPosition = finalPos
                     lastKnownPlaying = finalPlaying
                     socket?.send(WatchPartyMessage(type = "SEEK", position = finalPos, playing = finalPlaying))
-                    // anche IO aspetto il gate: niente più "chi carica prima riparte prima"
-                    beginSeekGate(finalPos, finalPlaying)
+                    beginSeekGate(finalPos, finalPlaying) // anche io aspetto il gate
                 }
             }
             return
@@ -416,11 +404,11 @@ class WatchPartyManager {
 
     /** Annulla localmente un'azione per cui l'host non ha dato il permesso, senza inviarla. */
     private fun revertUnauthorizedLocalChange(pos: Long, playing: Boolean?) {
-        val player = PlayerAccess.currentPlayer() ?: return
+        if (!WatchPartyPlayback.isPlayerScreenActive()) return
         lastRemoteCommandMs = System.currentTimeMillis() // riusa la finestra anti-eco per non ri-rilevarlo
-        player.seekTo(pos, PlayerEventSource.Sync)
+        WatchPartyPlayback.seekTo(pos)
         if (playing != null) {
-            player.handleEvent(if (playing) CSPlayerEvent.Play else CSPlayerEvent.Pause, PlayerEventSource.Sync)
+            if (playing) WatchPartyPlayback.play() else WatchPartyPlayback.pause()
         }
         onStatusText?.invoke("The host doesn't allow this action")
     }
@@ -549,28 +537,22 @@ class WatchPartyManager {
             "SYNC_REQUEST" -> if (role == Role.HOST) sendSyncState()
 
             "SYNC_STATE" -> applyRemote {
-                val player = PlayerAccess.currentPlayer() ?: return@applyRemote
-                val current = player.getPosition() ?: 0L
+                if (!WatchPartyPlayback.isPlayerScreenActive()) return@applyRemote
+                val current = WatchPartyPlayback.getPosition() ?: 0L
                 // heartbeat periodico: correggi solo se lo scarto è reale, niente
                 // seek continui che darebbero fastidio durante la visione normale
                 msg.position?.let {
-                    if (abs(current - it) > RESYNC_THRESHOLD_MS) player.seekTo(it, PlayerEventSource.Sync)
+                    if (abs(current - it) > RESYNC_THRESHOLD_MS) WatchPartyPlayback.seekTo(it)
                 }
                 if (msg.playing != null) {
-                    player.handleEvent(
-                        if (msg.playing) CSPlayerEvent.Play else CSPlayerEvent.Pause,
-                        PlayerEventSource.Sync
-                    )
+                    if (msg.playing) WatchPartyPlayback.play() else WatchPartyPlayback.pause()
                 }
             }
 
             "FORCE_SYNC" -> {
-                // richiesta ESPLICITA dell'utente (pulsante "Risincronizza ora"):
-                // applica sempre, a differenza di SYNC_STATE che corregge solo se lo
-                // scarto supera la soglia. Passa dal MEDESIMO gate di un SEEK organico
-                // (non più un seekTo+Play "a freddo"): altrimenti si ripresenta esattamente
-                // il problema "chi carica prima riparte prima" che il gate risolve per i
-                // seek normali — con più ospiti ognuno ripartirebbe per conto suo.
+                // richiesta esplicita dell'utente: applica sempre (a differenza di
+                // SYNC_STATE), passando dallo stesso gate di un SEEK organico per
+                // evitare che ognuno riparta per conto suo
                 val pos = msg.position ?: return
                 val playing = msg.playing ?: true
                 lastRemoteCommandMs = System.currentTimeMillis()
@@ -578,11 +560,11 @@ class WatchPartyManager {
             }
 
             "PLAY" -> applyRemote {
-                PlayerAccess.currentPlayer()?.handleEvent(CSPlayerEvent.Play, PlayerEventSource.Sync)
+                WatchPartyPlayback.play()
             }
 
             "PAUSE" -> applyRemote {
-                PlayerAccess.currentPlayer()?.handleEvent(CSPlayerEvent.Pause, PlayerEventSource.Sync)
+                WatchPartyPlayback.pause()
             }
 
             "SEEK" -> {
@@ -602,7 +584,9 @@ class WatchPartyManager {
             "EPISODE_HINT" -> msg.title?.let { onEpisodeHint?.invoke(it) }
 
             "NEXT_EPISODE" -> applyRemote {
-                PlayerAccess.currentPlayer()?.handleEvent(CSPlayerEvent.NextEpisode, PlayerEventSource.Sync)
+                // Su host che non supportano il comando (es. Nuvio Enhanced) questo
+                // no-op silenziosamente: nextEpisode() ritorna false, nessun crash.
+                WatchPartyPlayback.nextEpisode(localUserAction = false)
             }
         }
     }
@@ -649,15 +633,14 @@ class WatchPartyManager {
     }
 
     /**
-     * Rete di sicurezza manuale: forza un resync immediato e SEMPRE applicato
-     * (a differenza dell'heartbeat automatico, che corregge solo se lo scarto
-     * è reale). Un pulsante che "a volte non fa nulla" confonde: questo ha
-     * sempre un effetto visibile dall'altra parte.
+     * Forza un resync SEMPRE applicato (a differenza dell'heartbeat, che
+     * corregge solo se lo scarto è reale) — visibile all'altra parte anche
+     * quando non c'era nulla da correggere.
      */
     fun requestResyncNow() {
-        val player = PlayerAccess.currentPlayer() ?: return
-        val position = player.getPosition() ?: 0L
-        val playing = player.getIsPlaying()
+        if (!WatchPartyPlayback.isPlayerScreenActive()) return
+        val position = WatchPartyPlayback.getPosition() ?: 0L
+        val playing = WatchPartyPlayback.getIsPlaying()
         socket?.send(
             WatchPartyMessage(
                 type = "FORCE_SYNC",
@@ -665,27 +648,20 @@ class WatchPartyManager {
                 playing = playing,
             )
         )
-        // Anche chi lo richiede passa dal gate, come per un SEEK organico ("anche
-        // IO aspetto il gate"): così nessuno riparte prima degli altri. È un seek
-        // sulla propria posizione attuale (di fatto un no-op), ma serve a tenere
-        // tutti sincronizzati sulla stessa pausa/attesa/ripartenza.
-        beginSeekGate(position, playing)
+        beginSeekGate(position, playing) // anche chi lo richiede passa dal gate
         onStatusText?.invoke("Resync sent to all participants")
     }
 
     // ---------------------------------------------------------------------
     // Gate di attesa sincronizzata dopo un seek: tutti in pausa con
-    // rotellina finché non sono davvero pronti, poi ripartono insieme.
-    // Una sola pausa pulita (niente più doppio play→pausa→play che
-    // "lampeggiava" ad ogni seek) + attesa a tempo su TUTTI i lati: il lato
-    // locale manda READY dopo LOCAL_SEEK_READY_MS, il resolve avviene quando
-    // tutti gli altri partecipanti sono pronti (o dopo il timeout di sicurezza).
-    // Un nuovo seek durante l'attesa invalida quella vecchia (gateGeneration)
-    // e ne parte una nuova pulita.
+    // rotellina finché non sono davvero pronti, poi ripartono insieme. Il
+    // lato locale manda READY dopo LOCAL_SEEK_READY_MS, il resolve avviene
+    // quando tutti gli altri sono pronti (o dopo il timeout di sicurezza).
+    // Un nuovo seek durante l'attesa invalida quella vecchia (gateGeneration).
     // ---------------------------------------------------------------------
 
     private fun beginSeekGate(targetPos: Long, expectedPlaying: Boolean) {
-        val player = PlayerAccess.currentPlayer() ?: return
+        if (!WatchPartyPlayback.isPlayerScreenActive()) return
         gateActive = true
         gateGeneration++
         val myGen = gateGeneration
@@ -695,13 +671,11 @@ class WatchPartyManager {
         onBufferingGateChanged?.invoke(true)
 
         lastRemoteCommandMs = System.currentTimeMillis()
-        player.seekTo(targetPos, PlayerEventSource.Sync)
-        // una sola pausa pulita: niente più doppia transizione play→pausa→play
-        // che faceva "lampeggiare" il player ad ogni seek
-        player.handleEvent(CSPlayerEvent.Pause, PlayerEventSource.Sync)
+        WatchPartyPlayback.seekTo(targetPos)
+        WatchPartyPlayback.pause() // una sola pausa pulita, niente doppia transizione play→pausa→play
 
-        // il lato locale si considera "pronto" dopo un piccolo tempo di buffering,
-        // poi avvisa gli altri. Il resolve aspetta comunque i loro READY.
+        // il locale si considera "pronto" dopo un piccolo buffering, poi avvisa
+        // gli altri; il resolve aspetta comunque i loro READY
         mainHandler.postDelayed({
             if (gateActive && gateGeneration == myGen) {
                 localReady = true
@@ -710,7 +684,7 @@ class WatchPartyManager {
             }
         }, LOCAL_SEEK_READY_MS)
 
-        // rete di sicurezza: se un messaggio "READY" si perde, non restare bloccati
+        // rete di sicurezza: se un READY va perso, non restare bloccati
         mainHandler.postDelayed({
             if (gateActive && gateGeneration == myGen) resolveGate(myGen)
         }, GATE_SAFETY_TIMEOUT_MS)
@@ -735,19 +709,16 @@ class WatchPartyManager {
         gateActive = false
         onBufferingGateChanged?.invoke(false)
         lastRemoteCommandMs = System.currentTimeMillis()
-        PlayerAccess.currentPlayer()?.handleEvent(
-            if (gateExpectedPlaying) CSPlayerEvent.Play else CSPlayerEvent.Pause,
-            PlayerEventSource.Sync
-        )
+        if (gateExpectedPlaying) WatchPartyPlayback.play() else WatchPartyPlayback.pause()
     }
 
     private fun sendSyncState() {
-        val player = PlayerAccess.currentPlayer() ?: return
+        if (!WatchPartyPlayback.isPlayerScreenActive()) return
         socket?.send(
             WatchPartyMessage(
                 type = "SYNC_STATE",
-                position = player.getPosition() ?: 0L,
-                playing = player.getIsPlaying(),
+                position = WatchPartyPlayback.getPosition() ?: 0L,
+                playing = WatchPartyPlayback.getIsPlaying(),
             )
         )
     }
@@ -768,7 +739,13 @@ class WatchPartyManager {
             onStatusText?.invoke("The host doesn't allow you to change episodes")
             return
         }
-        PlayerAccess.currentPlayer()?.handleEvent(CSPlayerEvent.NextEpisode, PlayerEventSource.UI)
+        val handled = WatchPartyPlayback.nextEpisode(localUserAction = true)
+        if (!handled) {
+            // host che non espone un comando "prossimo episodio" (es. Nuvio via
+            // MediaSession): nessun effetto locale, ma niente crash e niente da propagare
+            onStatusText?.invoke("This host doesn't support changing episode from here")
+            return
+        }
         socket?.send("NEXT_EPISODE")
     }
 

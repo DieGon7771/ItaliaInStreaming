@@ -4,18 +4,31 @@ import org.jetbrains.kotlin.konan.properties.Properties
 
 plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.4.0"
+   
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.0"
 }
 
 dependencies {
-    implementation("com.google.android.material:material:1.4.0")
+    
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // WebSocket puro Kotlin, nessuna libreria nativa
     // compileOnly: solo per compilare contro le classi app; a runtime vengono dall'app
     compileOnly("androidx.navigation:navigation-fragment-ktx:2.7.7")
     compileOnly("com.jaredrummler:colorpicker:1.1.0")
+    // Solo per compilare contro androidx.media3.ui.PlayerView/Player (bridge
+    // Nuvio Enhanced, vedi NuvioPlaybackBridge.kt)
+    compileOnly("androidx.media3:media3-ui:1.8.0")
+    compileOnly("androidx.media3:media3-common:1.8.0")
+    // Solo per compilare contro MaterialAlertDialogBuilder/FloatingActionButton
+    
+    compileOnly("com.google.android.material:material:1.4.0")
+    
+    compileOnly("androidx.compose.material3:material3:1.2.1")
+    compileOnly("androidx.compose.ui:ui:1.6.7")
+    compileOnly("androidx.compose.runtime:runtime:1.6.7")
 }
 
 
-version = 3
+version = 4
 
 android {
     defaultConfig {

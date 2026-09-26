@@ -18,8 +18,21 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
+        <!-- ============================================================ -->
+        <!-- SEZIONE: icona Watch Party (quella con le due persone, apre   -->
+        <!-- il menu creazione/ingresso stanza)                           -->
+        <!-- ============================================================ -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="Watch Party icon"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
         <LinearLayout
-            android:id="@+id/wpa_options_card"
+            android:id="@+id/wpa_main_icon_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -41,7 +54,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Invisible button in the player"
+                        android:text="Invisible icon in the player"
                         android:textSize="13sp"
                         android:textStyle="bold" />
 
@@ -50,18 +63,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:alpha="0.6"
-                        android:text="Hides the button over the player but it stays clickable at the same position"
+                        android:text="Hides the Watch Party icon over the player but it stays clickable at the same position"
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <Switch
-                    android:id="@+id/wpa_invisible_button"
-                    android:layout_width="42dp"
+                <FrameLayout
+                    android:id="@+id/wpa_invisible_button_host"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:showText="false"
-                    android:switchMinWidth="28dp"
-                    android:text="" />
+                    android:minWidth="42dp" />
 
             </LinearLayout>
 
@@ -69,7 +79,75 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp"
                 android:background="#33FFFFFF" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:alpha="0.6"
+                android:text="Hold the pad below for ~2s, then drag: it works like a laptop trackpad, moving the real Watch Party icon by the same relative amount."
+                android:textSize="11sp" />
+
+            <FrameLayout
+                android:id="@+id/wpa_position_pad_main"
+                android:layout_width="match_parent"
+                android:layout_height="90dp">
+
+                <TextView
+                    android:id="@+id/wpa_position_hint_main"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:alpha="0.7"
+                    android:gravity="center"
+                    android:text="Hold to move"
+                    android:textSize="12sp" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/wpa_position_status_main"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:alpha="0.6"
+                android:gravity="center"
+                android:text=""
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/wpa_position_reset_main"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="Reset to default position"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- SEZIONE: chat (icona fumetto, pannello, aspetto, posizione)   -->
+        <!-- ============================================================ -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="10dp"
+            android:text="Chat"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/wpa_chat_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -96,18 +174,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:alpha="0.6"
-                        android:text="Hides the chat arrow but new messages still show the red dot"
+                        android:text="Hides the chat icon but new messages still show the red dot"
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <Switch
-                    android:id="@+id/wpa_invisible_chat"
-                    android:layout_width="42dp"
+                <FrameLayout
+                    android:id="@+id/wpa_invisible_chat_host"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:showText="false"
-                    android:switchMinWidth="28dp"
-                    android:text="" />
+                    android:minWidth="42dp" />
 
             </LinearLayout>
 
@@ -117,7 +192,7 @@
                 android:layout_marginTop="12dp"
                 android:background="#33FFFFFF" />
 
-        <LinearLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
@@ -161,73 +236,72 @@
 
             </LinearLayout>
 
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:layout_marginBottom="10dp"
-            android:text="Chat theme"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/wpa_theme_card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="14dp">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp"
+                android:background="#33FFFFFF" />
 
             <TextView
                 android:id="@+id/wpa_theme_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
                 android:alpha="0.6"
                 android:text="Choose the bubble colors in the chat"
                 android:textSize="11sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/wpa_glow_card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:gravity="center_vertical"
-            android:minHeight="52dp"
-            android:orientation="horizontal"
-            android:padding="14dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/wpa_theme_card"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="vertical" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Glow-style bubbles"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:background="#33FFFFFF" />
 
-                <TextView
-                    android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/wpa_glow_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:minHeight="52dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:alpha="0.6"
-                    android:text="Black bubbles with a border in the chosen color, like a neon sign"
-                    android:textSize="11sp" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Glow-style bubbles"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:alpha="0.6"
+                        android:text="Black bubbles with a border in the chosen color, like a neon sign"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <FrameLayout
+                    android:id="@+id/wpa_glow_host"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="42dp" />
+
             </LinearLayout>
-
-            <Switch
-                android:id="@+id/wpa_glow"
-                android:layout_width="42dp"
-                android:layout_height="wrap_content"
-                android:minHeight="0dp"
-                android:showText="false"
-                android:switchMinWidth="28dp"
-                android:text="" />
 
         </LinearLayout>
 
@@ -291,6 +365,73 @@
                 android:text="Reset to default position"
                 android:textSize="13sp"
                 android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- SEZIONE: intervallo di polling (avanzata/tecnica)             -->
+        <!-- ============================================================ -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="10dp"
+            android:text="Sync polling"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/wpa_polling_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/wpa_polling_info"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="10dp"
+                    android:gravity="center"
+                    android:text="!"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Polling interval"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/wpa_polling_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="10dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:gravity="center"
+                    android:text="200 ms"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/wpa_polling_slider_host"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
 
         </LinearLayout>
 

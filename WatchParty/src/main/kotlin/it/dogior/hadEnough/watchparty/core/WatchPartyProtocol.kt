@@ -28,11 +28,10 @@ data class PeerInfo(
 )
 
 /**
- * Unico envelope scambiato sul canale WebSocket. Il relay non lo interpreta:
- * si limita a inoltrarlo agli altri peer nella stessa stanza (vedi WatchPartyServer/worker.js).
- *
- * Stanza fino a 5 utenti. Ogni client ha un cid (UUID) stabile: il server lo usa
- * per tracciare roster e ordine di ingresso, e per l'host migration.
+ * Unico envelope scambiato sul canale WebSocket. Il relay non lo interpreta,
+ * si limita a inoltrarlo agli altri peer nella stanza (vedi WatchPartyServer/worker.js).
+ * Ogni client ha un cid (UUID) stabile: il server lo usa per roster, ordine
+ * di ingresso e host migration.
  *
  * type possibili (vedi WatchPartyManager.handleRemoteMessage):
  *  - "ROOM_STATE"                — al nuovo entrato: count, hostCid, roster (incluso sé stesso) e stato lucchetto

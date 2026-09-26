@@ -8,7 +8,6 @@ import android.view.Gravity
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.CommonActivity
@@ -23,9 +22,11 @@ private const val TAG = "WatchParty"
  * riproduzione (play/pausa/posizione) passano attraverso un relay esterno
  * (il Cloudflare Worker) per essere inoltrati agli altri utenti della stanza.
  *
- * Usa MaterialAlertDialogBuilder (non il semplice AlertDialog) apposta:
- * eredita automaticamente lo stile Material dell'app — angoli arrotondati,
- * colori del tema — senza bisogno di forzare colori a mano.
+ * Usa android.app.AlertDialog (non più MaterialAlertDialogBuilder): quella
+ * dipendeva da com.google.android.material, che non è detto sia presente a
+ * runtime su ogni host dei plugin CloudStream (es. Nuvio Enhanced, dove
+ * causava un NoClassDefFoundError qui). Un po' meno "vestito" nello stile,
+ * ma funziona ovunque senza bisogno di rilevare l'host.
  */
 object WatchPartyConsent {
 
@@ -54,7 +55,6 @@ object WatchPartyConsent {
     }
 
     private fun setAccepted() {
-        Log.d(TAG, "✅ WatchPartyConsent: utente ha accettato, salvo la preferenza")
         setKey(KEY_ACCEPTED, true)
         setKey(KEY_ACCEPTED_AT, System.currentTimeMillis())
         running = false
@@ -63,37 +63,30 @@ object WatchPartyConsent {
 
     /** Chiamata una volta sola da WatchPartyPlugin.load(). */
     fun attach() {
-        Log.d(TAG, "🚀 WatchPartyConsent.attach() chiamata da load() del plugin")
-        if (hasAccepted()) {
-            Log.d(TAG, "⏭️ WatchPartyConsent: già accettato in passato (${acceptedAtLabel()}), popup non necessario")
-            return
-        }
+        if (hasAccepted()) return
         if (running) return
         running = true
-        Log.d(TAG, "⏱️ WatchPartyConsent: avvio il controllo periodico (ogni 1s) per mostrare il popup")
         handler.post(tick)
     }
 
     private fun showIfNeeded() {
         if (hasAccepted() || shownThisSession) {
-            Log.d(TAG, "⏹️ WatchPartyConsent: fermo il controllo (accettato=${hasAccepted()}, mostrato=$shownThisSession)")
             running = false
             handler.removeCallbacks(tick)
             return
         }
-        val activity = CommonActivity.activity
-        if (activity == null) {
-            Log.d(TAG, "⌛ WatchPartyConsent: CommonActivity.activity è ancora null, riprovo tra 1s")
-            return
-        }
-        Log.d(TAG, "🎬 WatchPartyConsent: activity trovata (${activity::class.java.simpleName}), mostro il popup ORA")
+        val activity = CommonActivity.activity ?: return
         shownThisSession = true
         running = false
         handler.removeCallbacks(tick)
         try {
             show(activity)
-        } catch (e: Exception) {
-            Log.e(TAG, "💥 WatchPartyConsent: ECCEZIONE mentre costruivo il popup", e)
+        } catch (e: Throwable) {
+            // Throwable e non solo Exception: un NoClassDefFoundError (classe
+            // mancante a runtime, es. libreria non presente sull'host) è un
+            // Error, non un'Exception — un catch (e: Exception) qui non lo
+            // avrebbe intercettato, lasciando il popup crashare comunque.
+            Log.e(TAG, "Eccezione mentre costruivo il popup di consenso", e)
             shownThisSession = false // ritenta al prossimo giro se qualcosa è andato storto
         }
     }
@@ -133,29 +126,33 @@ object WatchPartyConsent {
         container.addView(messageView)
         container.addView(checkBox)
 
-        val dialog = MaterialAlertDialogBuilder(context)
+        val dialog = newAlertDialogBuilder(context)
             .setTitle("Privacy & Sync Notes")
             .setView(container)
             .setCancelable(false)
             .setPositiveButton("Accept", null) // listener sotto, per poterlo disabilitare all'inizio
             .create()
 
+        styleAsWatchPartyPanel(
+            dialog,
+            android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFF000000.toInt())
+                cornerRadius = dp(context, 16).toFloat()
+            },
+        )
+
         dialog.setOnShowListener {
-            Log.d(TAG, "👀 WatchPartyConsent: popup effettivamente visibile a schermo (onShow)")
-            val acceptBtn = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+            val acceptBtn = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
             acceptBtn.isEnabled = false
             checkBox.setOnCheckedChangeListener { _, checked ->
-                Log.d(TAG, "☑️ WatchPartyConsent: checkbox = $checked")
                 acceptBtn.isEnabled = checked
             }
             acceptBtn.setOnClickListener {
-                Log.d(TAG, "🖱️ WatchPartyConsent: pulsante Accetto premuto")
                 setAccepted()
                 dialog.dismiss()
             }
         }
 
         dialog.show()
-        Log.d(TAG, "📤 WatchPartyConsent: dialog.show() chiamato")
     }
 }

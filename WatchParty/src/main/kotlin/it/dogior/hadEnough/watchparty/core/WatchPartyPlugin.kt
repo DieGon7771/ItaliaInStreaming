@@ -24,9 +24,14 @@ class WatchPartyPlugin : Plugin() {
     private lateinit var overlay: WatchPartyOverlay
 
     override fun load(context: Context) {
-        Log.d(TAG, "🔌 WatchPartyPlugin.load() chiamato")
+        // Nuvio Enhanced rifiuta i plugin che non registrano almeno un
+        // MainAPI (vedi WatchPartyNuvioProvider). Su CloudStream vero non
+        // serve e non lo registriamo, per non sporcare la lista fonti.
+        if (!WatchPartyPlayback.isCloudStreamHost) {
+            registerMainAPI(WatchPartyNuvioProvider())
+        }
+
         overlay = WatchPartyOverlay(plugin = this, manager = manager, onClick = {
-            Log.d(TAG, "👆 FAB del player cliccato")
             openSettingsSheet()
         })
         overlay.start()
@@ -34,28 +39,28 @@ class WatchPartyPlugin : Plugin() {
     }
 
     override fun beforeUnload() {
-        Log.d(TAG, "🔻 WatchPartyPlugin.beforeUnload()")
         overlay.stop()
         manager.release()
     }
 
     private fun openSettingsSheet() {
         val rawActivity = CommonActivity.activity
-        Log.d(TAG, "🔧 openSettingsSheet(): CommonActivity.activity = ${rawActivity?.let { it::class.java.name } ?: "null"}")
         val activity = rawActivity as? AppCompatActivity
         if (activity == null) {
-            Log.e(TAG, "❌ openSettingsSheet(): il cast ad AppCompatActivity è fallito, esco senza fare nulla (era questo il bug del 'non succede niente'?)")
+            Log.e(TAG, "openSettingsSheet(): CommonActivity.activity non è un AppCompatActivity, impossibile aprire il foglio impostazioni")
             return
         }
-        Log.d(TAG, "📄 openSettingsSheet(): apro la BottomSheetDialogFragment")
-        WatchPartySettingsFragment(this, manager).show(activity.supportFragmentManager, "WatchParty")
+        if (WatchPartyPlayback.isCloudStreamHost) {
+            WatchPartySettingsFragmentCloudStream(this, manager).show(activity.supportFragmentManager, "WatchParty")
+        } else {
+            WatchPartySettingsFragmentNuvio(this, manager).show(activity.supportFragmentManager, "WatchParty")
+        }
     }
 
     init {
         // Chiamato quando l'utente apre le impostazioni del plugin dalla
         // schermata Estensioni: stesso ingresso usato dal FAB sopra il player.
         this.openSettings = {
-            Log.d(TAG, "👆 'Impostazioni' aperte dalla lista Estensioni")
             openSettingsSheet()
         }
     }
