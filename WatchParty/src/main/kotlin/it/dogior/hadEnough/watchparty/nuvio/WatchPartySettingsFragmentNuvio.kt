@@ -125,6 +125,7 @@ class WatchPartySettingsFragmentNuvio(
         val resyncBtn = root.findView<TextView>("wp_resync")
 
         val settingsCard = root.findView<View>("wp_settings_card")
+        val closeBtn = root.findView<TextView>("wp_close")
 
         // --- Stile "card" identico a StreamITA ---
         statusCard.applyOutlineBackground()
@@ -140,11 +141,14 @@ class WatchPartySettingsFragmentNuvio(
         copyPinBtn.applyOutlineBackground()
         copyPinBtn.setImageDrawable(getDrawable("copy_icon"))
         settingsCard.applyOutlineBackground()
+        closeBtn.applyOutlineBackground()
 
         settingsCard.setOnClickListener {
             WatchPartyAdvancedSettingsFragmentNuvio(plugin, this@WatchPartySettingsFragmentNuvio)
                 .show(parentFragmentManager, "WatchPartyAdvancedSettings")
         }
+
+        closeBtn.setOnClickListener { dismiss() }
 
         // --- Editor permessi ospite (solo host) ---
         fun showPermissionsEditor() {

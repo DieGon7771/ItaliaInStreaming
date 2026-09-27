@@ -80,6 +80,10 @@ class WatchPartyAdvancedSettingsFragmentNuvio(
         // agganciate dinamicamente).
         root.background = getDrawable("watchparty_panel_background")
 
+        val closeBtn = root.findView<TextView>("wpa_close")
+        closeBtn.background = getDrawable("outline")
+        closeBtn.setOnClickListener { dismiss() }
+
         // --- Icona Watch Party: invisibile + posizione ---
         val mainIconCard = root.findView<View>("wpa_main_icon_card")
         val invisibleButtonHost = root.findView<FrameLayout>("wpa_invisible_button_host")

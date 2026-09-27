@@ -118,6 +118,7 @@ class WatchPartySettingsFragmentCloudStream(
         val resyncBtn = root.findView<TextView>("wp_resync")
 
         val settingsCard = root.findView<View>("wp_settings_card")
+        val closeBtn = root.findView<TextView>("wp_close")
 
         // --- Stile "card" identico a StreamITA ---
         statusCard.applyOutlineBackground()
@@ -133,6 +134,9 @@ class WatchPartySettingsFragmentCloudStream(
         copyPinBtn.applyOutlineBackground()
         copyPinBtn.setImageDrawable(getDrawable("copy_icon"))
         settingsCard.applyOutlineBackground()
+        // Richiesto solo per Nuvio (dove manca lo swipe-down nativo del
+        // bottom sheet): su CloudStream resta nascosto.
+        closeBtn.visibility = View.GONE
 
         settingsCard.setOnClickListener {
             WatchPartyAdvancedSettingsFragmentCloudStream(plugin, this@WatchPartySettingsFragmentCloudStream)

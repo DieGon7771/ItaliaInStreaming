@@ -76,6 +76,11 @@ class WatchPartyAdvancedSettingsFragmentCloudStream(
     ): View? = try {
         val root = getLayout("watchparty_settings_advanced", inflater, container)
 
+        val closeBtn = root.findView<TextView>("wpa_close")
+        // Richiesto solo per Nuvio (dove manca lo swipe-down nativo del
+        // bottom sheet): su CloudStream resta nascosto.
+        closeBtn.visibility = View.GONE
+
         // --- Icona Watch Party: invisibile + posizione ---
         val mainIconCard = root.findView<View>("wpa_main_icon_card")
         val invisibleButtonHost = root.findView<FrameLayout>("wpa_invisible_button_host")

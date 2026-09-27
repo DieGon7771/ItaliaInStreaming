@@ -22,11 +22,10 @@ private const val TAG = "WatchParty"
  * riproduzione (play/pausa/posizione) passano attraverso un relay esterno
  * (il Cloudflare Worker) per essere inoltrati agli altri utenti della stanza.
  *
- * Usa android.app.AlertDialog (non più MaterialAlertDialogBuilder): quella
- * dipendeva da com.google.android.material, che non è detto sia presente a
- * runtime su ogni host dei plugin CloudStream (es. Nuvio Enhanced, dove
- * causava un NoClassDefFoundError qui). Un po' meno "vestito" nello stile,
- * ma funziona ovunque senza bisogno di rilevare l'host.
+ * Costruito con newAlertDialogBuilder() (vedi WatchPartyDialogStyle.kt):
+ * Material vero su CloudStream, androidx.appcompat.app.AlertDialog.Builder
+ * altrove. Confermato funzionante su Nuvio (crash reali finora hanno
+ * riguardato solo AppCompatActivity, non AlertDialog dello stesso pacchetto).
  */
 object WatchPartyConsent {
 

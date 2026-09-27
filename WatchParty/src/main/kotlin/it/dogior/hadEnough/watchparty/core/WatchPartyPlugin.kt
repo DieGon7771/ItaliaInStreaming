@@ -2,7 +2,6 @@ package it.dogior.hadEnough.watchparty
 
 import android.content.Context
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
 import com.lagradost.cloudstream3.CommonActivity
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
@@ -43,18 +42,25 @@ class WatchPartyPlugin : Plugin() {
         manager.release()
     }
 
-    private fun openSettingsSheet() {
-        val rawActivity = CommonActivity.activity
-        val activity = rawActivity as? AppCompatActivity
+    private fun openSettingsSheet() = runCatching {
+        // FragmentActivity, non AppCompatActivity: supportFragmentManager è già
+        // dichiarato lì. AppCompatActivity (androidx.appcompat.app) non è
+        // risolvibile dal classloader del plugin su alcune build/dispositivi
+        // Nuvio (causava NoClassDefFoundError anche solo per fare "as?"),
+        // mentre androidx.fragment.* lo è sempre: è la stessa libreria da cui
+        // viene DialogFragment, già usato ovunque nel plugin senza problemi.
+        val activity = CommonActivity.activity as? androidx.fragment.app.FragmentActivity
         if (activity == null) {
-            Log.e(TAG, "openSettingsSheet(): CommonActivity.activity non è un AppCompatActivity, impossibile aprire il foglio impostazioni")
-            return
+            Log.e(TAG, "openSettingsSheet(): CommonActivity.activity non è una FragmentActivity, impossibile aprire il foglio impostazioni")
+            return@runCatching
         }
         if (WatchPartyPlayback.isCloudStreamHost) {
             WatchPartySettingsFragmentCloudStream(this, manager).show(activity.supportFragmentManager, "WatchParty")
         } else {
             WatchPartySettingsFragmentNuvio(this, manager).show(activity.supportFragmentManager, "WatchParty")
         }
+    }.onFailure {
+        Log.e(TAG, "openSettingsSheet(): eccezione inattesa, impossibile aprire il foglio impostazioni", it)
     }
 
     init {
