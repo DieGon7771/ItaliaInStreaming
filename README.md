@@ -43,10 +43,10 @@ Spiegazione dettagliata della homepage personalizzata (configurazione home).
 
 [Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_SectionOrganizer.md)
 
-**StreamITA – Guida** 
-Spiegazione dettagliata ......
+**WatchParty🎉 – Guida** 
+Spiegazione dettagliata di come usare WatchParty.
 
-[Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_StreamITA.md)
+[Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_WatchParty.md)
 
 ## 🔀 Crediti
 • **La maggior parte dei plugin** sono stati forkati da: [doGiorsHadEnough](https://github.com/doGior/doGiorsHadEnough) 
