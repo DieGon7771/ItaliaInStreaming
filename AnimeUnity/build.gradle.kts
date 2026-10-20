@@ -1,12 +1,12 @@
 // use an integer for version numbers
-version = 17
+version = 18
 
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
     description = "Anime da AnimeUnity"
-    authors = listOf("doGior","DieGon")
+    authors = listOf("DieGon")
 
     /**
     * Status int as the following:
