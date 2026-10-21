@@ -43,7 +43,7 @@ class AnimeUnity : MainAPI() {
 
     companion object {
         @Suppress("ConstPropertyName")
-        const val mainUrl = "https://www.animeunity.to"
+        const val mainUrl = "https://broad-mouse-85c7.diegon7771.workers.dev"
         var name = "AnimeUnity"
         var headers = mapOf(
             "Host" to mainUrl.toHttpUrl().host,
@@ -120,7 +120,7 @@ class AnimeUnity : MainAPI() {
         if (!imageUrl.isNullOrEmpty()) {
             try {
                 val fileName = imageUrl.substringAfterLast("/")
-                return "https://img.animeunity.so/anime/$fileName"
+                return "https://img.animeunity.co/anime/$fileName"
             } catch (_: Exception) {
                 // Fallback to Anilist if direct image fails
             }
@@ -350,8 +350,7 @@ class AnimeUnity : MainAPI() {
         if (imageUrl.isNotEmpty()) {
             try {
                 val fileName = imageUrl.substringAfterLast("/")
-                val cdnHost = mainUrl.toHttpUrl().host.replace("www", "img")
-                return "https://$cdnHost/anime/$fileName"
+                return "https://img.animeunity.co/anime/$fileName"
             } catch (_: Exception) {
             }
         }
