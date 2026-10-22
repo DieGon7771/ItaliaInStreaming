@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 4
+version = 5
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
@@ -14,12 +14,12 @@ cloudstream {
     * 2: Slow
     * 3: Beta only
     * */
-    status = 0
+    status = 1
 
     tvTypes = listOf("Movie", "TvSeries", "Cartoon", "Anime", "Documentary")
 
     requiresResources = false
     language = "it"
 
-    iconUrl = "https://lingering-truth-455c.diegon7771.workers.dev/wp-content/uploads/2023/01/cropped-tv-1.png"
+    iconUrl = "https://onlineserietv.mom/wp-content/uploads/2023/01/cropped-tv-1.png"
 }

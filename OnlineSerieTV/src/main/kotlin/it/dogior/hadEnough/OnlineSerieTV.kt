@@ -1,13 +1,6 @@
 package it.dogior.hadEnough
 
-import android.app.Activity
-import android.app.AlertDialog
-import android.graphics.BitmapFactory
-import android.util.Base64
-import android.util.Log
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -29,14 +22,13 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newTvSeriesSearchResponse
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
-import it.dogior.hadEnough.extractors.MaxStreamExtractor
-import kotlinx.coroutines.suspendCancellableCoroutine
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.SocketTimeoutException
-import kotlin.coroutines.resume
 
 class OnlineSerieTV : MainAPI() {
     override var mainUrl = "https://onlineserietv.lol"
@@ -181,10 +173,7 @@ class OnlineSerieTV : MainAPI() {
                 }
             }
 
-            else -> {
-                Log.d("OnlineSerieTV", "Unknown section: $section")
-                emptyList()
-            }
+            else -> emptyList()
         }
         return searchResponses
     }
@@ -280,155 +269,29 @@ class OnlineSerieTV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        Log.d("OnlineSerieTV:Links", "Data: $data")
-        val links = parseJson<List<String>>(data)
-        links.forEach {
-            if (!it.contains("uprot")) return@forEach
-            if (it.contains("msd")) {
-                Log.d("OnlineSerieTV:Links", "⏭️ Skip Scarica: $it")
+        val links = runCatching { parseJson<List<String>>(data) }.getOrNull() ?: return false
+        links.forEach { raw ->
+            val link = raw.trim()
+            if (!link.contains("uprot")) return@forEach
+            if (link.contains("msd") || link.contains("fxf")) return@forEach
+
+            val m3u8 = UprotResolver.resolve(link)
+            if (m3u8 == null) {
+                Log.e("OnlineSerieTV", "resolve failed: $link")
                 return@forEach
             }
-
-            if (it.contains("fxf")) {
-                Log.d("OnlineSerieTV:Links", "⏭️ Skip FXF (disattivato): $it")
-            } else {
-                val url = bypassUprot(it)
-                Log.d("OnlineSerieTV:Links", "Bypassed Url: $url")
-                if (url != null) {
-                    Log.d("OnlineSerieTV:Links", "🎬 MaxStreamExtractor")
-                    MaxStreamExtractor().getUrl(url, null, subtitleCallback, callback)
+            callback.invoke(
+                newExtractorLink(
+                    source = "MaxStream",
+                    name = "MaxStream",
+                    url = m3u8,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = "https://maxstream.video/"
+                    this.quality = Qualities.Unknown.value
                 }
-            }
+            )
         }
         return true
-    }
-
-    private fun getActivity(): Activity? {
-        return try {
-            val clazz = Class.forName("com.lagradost.cloudstream3.CommonActivity")
-            val instance = clazz.getDeclaredField("INSTANCE").apply { isAccessible = true }.get(null)
-            clazz.getDeclaredMethod("getActivity").invoke(instance) as? Activity
-        } catch (e: Exception) {
-            Log.e("UprotPopup", "Reflection fallita: ${e.message}")
-            null
-        }
-    }
-
-    private suspend fun showCaptchaDialog(base64Data: String): String? {
-        return suspendCancellableCoroutine { continuation ->
-            val activity = getActivity()
-            if (activity == null) {
-                Log.e("UprotPopup", "Activity non disponibile")
-                if (continuation.isActive) continuation.resume(null)
-                return@suspendCancellableCoroutine
-            }
-
-            activity.runOnUiThread {
-                try {
-                    val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
-                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-
-                    val layout = LinearLayout(activity).apply {
-                        orientation = LinearLayout.VERTICAL
-                        setPadding(50, 40, 50, 40)
-                    }
-
-                    val imageView = ImageView(activity).apply {
-                        setImageBitmap(bitmap)
-                        adjustViewBounds = true
-                    }
-
-                    val inputEditText = EditText(activity).apply {
-                        hint = "Inserisci i numeri che vedi"
-                        inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                    }
-
-                    layout.addView(imageView)
-                    layout.addView(inputEditText)
-
-                    val dialog = AlertDialog.Builder(activity)
-                        .setTitle("Verifica Richiesta")
-                        .setMessage("Risolvi il CAPTCHA per avviare il video")
-                        .setView(layout)
-                        .setCancelable(false)
-                        .setPositiveButton("Sblocca") { _, _ ->
-                            val codice = inputEditText.text.toString().trim()
-                            if (continuation.isActive) continuation.resume(codice)
-                        }
-                        .setNegativeButton("Annulla") { _, _ ->
-                            if (continuation.isActive) continuation.resume(null)
-                        }
-                        .create()
-
-                    dialog.show()
-                } catch (e: Exception) {
-                    Log.e("UprotPopup", "Errore dialog: ${e.message}")
-                    if (continuation.isActive) continuation.resume(null)
-                }
-            }
-        }
-    }
-
-    private suspend fun bypassUprot(link: String): String? {
-        val updatedLink = if ("msf" in link) link.replace("msf", "mse") else link
-        Log.d("Uprot", "🟦 bypassUprot() MSF: $updatedLink")
-
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-        )
-
-        val response = app.get(updatedLink, headers = headers, timeout = 10_000)
-        val document = response.document
-        Log.d("Uprot", "🟡 GET completato, URL finale: ${response.url}")
-
-        val tokenElement = document.selectFirst("input[name=token]")
-        val captchaImg = document.selectFirst("img[alt=CAPTCHA]")
-
-        if (tokenElement == null || captchaImg == null) {
-            Log.d("Uprot", "🟢 Nessun captcha MSF, cerco link diretto")
-            val directLink = document.selectFirst("a[href*='maxstream'], a[href*='maxwe'], a[href*='uprots']")?.attr("href")
-            Log.d("Uprot", "🔗 Link MSF diretto: $directLink")
-            return directLink
-        }
-
-        Log.d("Uprot", "🟠 Captcha MSF rilevato")
-        val token = tokenElement.attr("value")
-        val imgSrc = captchaImg.attr("src")
-        val base64Data = imgSrc.substringAfter("base64,")
-
-        val captchaRisolto = showCaptchaDialog(base64Data)
-        if (captchaRisolto.isNullOrEmpty()) {
-            Log.d("Uprot", "❌ Captcha annullato dall'utente")
-            return null
-        }
-        Log.d("Uprot", "✅ Captcha ricevuto: $captchaRisolto")
-
-        val postResponse = app.post(
-            updatedLink, headers = headers,
-            data = mapOf("token" to token, "capt" to captchaRisolto),
-            timeout = 10_000
-        )
-        Log.d("Uprot", "🟡 POST completato, URL finale: ${postResponse.url}")
-
-        val finalUrl = postResponse.url
-        if (finalUrl != null && !finalUrl.contains("uprot.net")) {
-            Log.d("Uprot", "✅ Redirect diretto MSF: $finalUrl")
-            return finalUrl
-        }
-
-        val postDoc = postResponse.document
-        val buttokLink = postDoc.selectFirst("#buttok")?.parent()?.attr("href")
-        if (buttokLink != null && buttokLink.isNotEmpty()) {
-            Log.d("Uprot", "✅ Link da #buttok: $buttokLink")
-            return buttokLink
-        }
-        val uprotsLink = postDoc.selectFirst("a[href*='uprots']")?.attr("href")
-        if (uprotsLink != null) {
-            Log.d("Uprot", "✅ Link da uprots: $uprotsLink")
-            return uprotsLink
-        }
-        val fallbackLink = postDoc.selectFirst("a[href*='maxstream'], a[href*='maxwe']")?.attr("href")
-        Log.d("Uprot", "🔗 Fallback link: $fallbackLink")
-        return fallbackLink
     }
 }

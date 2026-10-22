@@ -29,5 +29,6 @@ include(
 //    "ToonItalia",
     "Torrentio",
     "WatchParty",
+    "Wrapped",
 //    "YouTube"
 )

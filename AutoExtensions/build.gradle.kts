@@ -11,7 +11,7 @@ dependencies {
     compileOnly("androidx.compose.runtime:runtime:1.6.7")
 }
 
-version = 1
+version = 2
 
 android {
     buildFeatures {
