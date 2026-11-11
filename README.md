@@ -33,6 +33,11 @@ Spiegazione dettagliata di Stremio (configurazione addons).
 
 [Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_Stremio.md)
 
+**Nuvio – Guida**
+Spiegazione dettagliata di Nuvio (configurazione plugins).
+
+[Apri Guida →](https://github.com/DieGon7771/ItaliaInStreaming/blob/master/guide/README_Nuvio.md)
+
 **SyncStream – Guida** 
 Spiegazione dettagliata di Cross Device Sync (sincronizzazione dispositivi).
 
