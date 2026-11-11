@@ -22,7 +22,7 @@ android {
 cloudstream {
     authors = listOf("DieGon")
 
-    status = 3
+    status = 1
 
     tvTypes = listOf(
         "Others",

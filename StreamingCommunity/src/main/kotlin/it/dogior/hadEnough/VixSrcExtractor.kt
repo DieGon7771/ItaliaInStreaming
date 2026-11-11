@@ -42,7 +42,7 @@ class VixSrcExtractor : ExtractorApi() {
                 callback.invoke(
                     newExtractorLink(
                         source = name,
-                        name = name,
+                        name = "Streaming Community - VixSrc",
                         url = m3u8Url,
                         type = ExtractorLinkType.M3U8
                     ) {

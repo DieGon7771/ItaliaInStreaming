@@ -41,8 +41,8 @@ class StreamingCommunity(
     override var lang: String = "it",
     private val showLogo: Boolean = true
 ) : MainAPI() {
-    private val siteRootUrl = "https://streamingunity.dog/"
-    private val cdnHost = "cdn.streamingunity.dog"
+    private val siteRootUrl = "https://streamingunity.fun/"
+    private val cdnHost = "cdn.streamingunity.fun"
     private var inertiaVersion = ""
     private var decodedXsrfToken = ""
     private val headers = mapOf(

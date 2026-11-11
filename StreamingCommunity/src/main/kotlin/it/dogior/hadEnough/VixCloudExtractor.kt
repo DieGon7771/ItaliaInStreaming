@@ -11,9 +11,9 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.json.JSONObject
 
 class VixCloudExtractor : ExtractorApi() {
-    override val mainUrl = "vixcloud.co"
+    override val mainUrl = "vixcloud.cc"
     override val name = "VixCloud"
-    override val requiresReferer = false
+    override val requiresReferer = true
     val TAG = "VixCloudExtractor"
     private var referer: String? = null
     private val h = mutableMapOf(
@@ -78,7 +78,7 @@ class VixCloudExtractor : ExtractorApi() {
     private suspend fun getScript(url: String): JSONObject {
         Log.d(TAG, "Item url: $url")
 
-        val iframe = app.get(url, headers = h, interceptor = CloudflareKiller()).document
+        val iframe = app.get(url, headers = h, referer = this.referer()).document
         Log.d(TAG, iframe.toString())
 
 //        Log.d(TAG, iframe.document.toString())

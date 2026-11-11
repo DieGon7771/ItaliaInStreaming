@@ -53,13 +53,13 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
      * */
-    status = 3 
+    status = 1 
 
     tvTypes = listOf(
         "Others",
     )
 
     iconUrl = "https://raw.githubusercontent.com/DieGon7771/ItaliaInStreaming/master/WatchParty/WatchParty_icon.png"
-    description = "⚠️ BETA ⚠️ Watch movies and TV series together in real-time with live chat (Up to 5 users)."
+    description = "Watch movies and TV series together in real-time with live chat (Up to 5 users)."
     requiresResources = true
 }
