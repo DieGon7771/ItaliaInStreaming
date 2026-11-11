@@ -78,7 +78,7 @@ class VixCloudExtractor : ExtractorApi() {
     private suspend fun getScript(url: String): JSONObject {
         Log.d(TAG, "Item url: $url")
 
-        val iframe = app.get(url, headers = h, referer = this.referer()).document
+        val iframe = app.get(url, headers = h, referer = this.referer).document
         Log.d(TAG, iframe.toString())
 
 //        Log.d(TAG, iframe.document.toString())
