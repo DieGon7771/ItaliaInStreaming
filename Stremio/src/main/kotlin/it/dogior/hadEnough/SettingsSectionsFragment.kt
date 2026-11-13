@@ -234,7 +234,7 @@ class SettingsSectionsFragment(
             headerRow.addView(nameText)
 
             val addonCount = TextView(requireContext()).apply {
-                text = str("addon_count", "%d/5 addon", section.streamAddons.size)
+                text = str("addon_count", "%d addon", section.streamAddons.size)
                 textSize = 12f
                 setPadding(dpToPx(8), 0, dpToPx(8), 0)
             }
@@ -310,7 +310,7 @@ class SettingsSectionsFragment(
         }
     }
 
-    // ── shared section editor (programmatic, like StreamITA) ──
+    // ── shared section editor ──
 
     private fun showSectionEditor(view: View, existing: SectionConfig?) {
         val ctx = context ?: return
@@ -350,16 +350,22 @@ class SettingsSectionsFragment(
         layout.addView(catalogInput)
 
         val addonsLabel = TextView(ctx).apply {
-            text = str("editor_addons_label", "Stream addon (massimo 5)")
+            text = str("editor_addons_label", "Stream addon")
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
             setPadding(0, dpToPx(16), 0, dpToPx(8))
         }
         layout.addView(addonsLabel)
 
-        val addonSlots = mutableListOf<Pair<EditText, EditText>>()
+       
         val existingAddons = existing?.streamAddons ?: emptyList()
-        for (i in 0 until 5) {
+        val addonSlots = mutableListOf<Pair<EditText, EditText>>()
+        val slotIds = mutableListOf<Long?>()
+        val slotsContainer = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        layout.addView(slotsContainer)
+
+        fun addSlot(addon: StreamAddonConfig?): EditText {
+            val number = addonSlots.size + 1
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
@@ -373,7 +379,7 @@ class SettingsSectionsFragment(
             }
 
             val label = TextView(ctx).apply {
-                text = str("editor_addon_label", "Addon #%d", i + 1)
+                text = str("editor_addon_label", "Addon #%d", number)
                 textSize = 13f
                 setTypeface(null, Typeface.BOLD)
             }
@@ -382,20 +388,51 @@ class SettingsSectionsFragment(
             val etName = EditText(ctx).apply {
                 hint = str("editor_addon_name_hint", "Nome")
                 inputType = InputType.TYPE_CLASS_TEXT
-                if (i < existingAddons.size) setText(existingAddons[i].name)
+                if (addon != null) setText(addon.name)
             }
             row.addView(etName)
 
             val etUrl = EditText(ctx).apply {
                 hint = str("editor_addon_url_hint", "https://example.com (manifest.json)")
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-                if (i < existingAddons.size) setText(existingAddons[i].url)
+                if (addon != null) setText(addon.url)
             }
             row.addView(etUrl)
 
             addonSlots.add(etName to etUrl)
-            layout.addView(row)
+            slotIds.add(addon?.id)
+            slotsContainer.addView(row)
+            return etName
         }
+
+        val initialSlots = maxOf(3, existingAddons.size)
+        for (i in 0 until initialSlots) addSlot(existingAddons.getOrNull(i))
+
+        val addSlotBtn = TextView(ctx).apply {
+            text = "+"
+            textSize = 24f
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#FF7CFF9D"))
+            val greenDrawable = getDrawable("outline_green")
+            if (greenDrawable != null) background = greenDrawable else applyOutlineBackground(this)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(48)
+            ).apply { topMargin = dpToPx(4) }
+            isFocusable = true
+            isClickable = true
+            contentDescription = str("editor_add_addon", "Aggiungi addon")
+            setOnFocusChangeListener { v, hasFocus -> v.alpha = if (hasFocus) 1f else 0.7f }
+            alpha = 0.7f
+            setOnClickListener {
+                val field = addSlot(null)
+                outer.post {
+                    outer.fullScroll(View.FOCUS_DOWN)
+                    field.requestFocus()
+                }
+            }
+        }
+        layout.addView(addSlotBtn)
 
         outer.addView(layout)
 
@@ -421,8 +458,7 @@ class SettingsSectionsFragment(
                             val aurl = pair.second.text.toString().trim()
                             if (aurl.isNotBlank()) {
                                 addons.add(StreamAddonConfig(
-                                    id = if (existing != null && idx < existingAddons.size) existingAddons[idx].id
-                                          else System.currentTimeMillis() + idx,
+                                    id = slotIds[idx] ?: (System.currentTimeMillis() + idx),
                                     name = aname.ifBlank { str("editor_addon_default_name", "Addon %d", idx + 1) },
                                     url = aurl,
                                     type = "https"

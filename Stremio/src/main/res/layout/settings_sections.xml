@@ -64,7 +64,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:alpha="0.6"
-                        android:text="Ogni sezione ha 1 catalogo opzionale + fino a 5 stream addon"
+                        android:text="Ogni sezione ha 1 catalogo opzionale + addons"
                         android:textSize="12sp" />
                 </LinearLayout>
 

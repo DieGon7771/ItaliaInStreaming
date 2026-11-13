@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.konan.properties.Properties
 
-version = 14
+version = 15
 
 android {
     buildFeatures {
@@ -21,9 +21,9 @@ dependencies {
 
 cloudstream {
     language = "it"
-    description = "Addon di Stremio su Cloudstream"
-    authors = listOf("Hexated, phisher98, DieGon")
-    status = 3
+    description = "Addons di Stremio su Cloudstream"
+    authors = listOf("DieGon")
+    status = 1
     tvTypes = listOf(
         "TvSeries",
         "Movie",
