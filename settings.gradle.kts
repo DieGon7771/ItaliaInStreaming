@@ -19,6 +19,7 @@ include(
     "GuardaSerie",
     "Huhu",
 //    "IlGenioDelloStreaming",
+    "Nuvio",
     "OnlineSerieTV",
     "SectionOrganizer",
     "SleepGuard",

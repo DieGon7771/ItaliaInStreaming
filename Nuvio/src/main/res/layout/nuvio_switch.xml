@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fallback Switch (the code first tries a MaterialSwitch, the Material 3 toggle used by the app -->
+<Switch xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="42dp"
+    android:layout_height="wrap_content"
+    android:minHeight="0dp"
+    android:showText="false"
+    android:switchMinWidth="28dp"
+    android:text="" />
