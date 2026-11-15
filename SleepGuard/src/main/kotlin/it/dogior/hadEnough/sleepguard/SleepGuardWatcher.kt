@@ -43,6 +43,11 @@ object SleepGuardWatcher {
 
     private var popupShowing = false
 
+    private fun markInteraction() {
+        lastInteractionAt = System.currentTimeMillis()
+        episodesSinceInteraction = 0
+    }
+
     fun start(plugin: SleepGuardPlugin) {
         hostPlugin = plugin
         if (started) return
@@ -125,7 +130,7 @@ object SleepGuardWatcher {
             isFocusable = false
             setOnTouchListener { _, event ->
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                    lastInteractionAt = System.currentTimeMillis()
+                    markInteraction()
                 }
                 false
             }
@@ -147,7 +152,7 @@ object SleepGuardWatcher {
         val wrapper: (Pair<KeyEvent?, Boolean>) -> Boolean = { pair ->
             val (event, _) = pair
             if (event != null && isRelevantKey(event.keyCode)) {
-                lastInteractionAt = System.currentTimeMillis()
+                markInteraction()
             }
             originalKeyListener?.invoke(pair) ?: false
         }
@@ -209,8 +214,7 @@ object SleepGuardWatcher {
             plugin = plugin,
             onYes = {
                 popupShowing = false
-                lastInteractionAt = System.currentTimeMillis()
-                episodesSinceInteraction = 0
+                markInteraction()
                 lastSeenTitle = null
                 runCatching { fragment.player.handleEvent(CSPlayerEvent.Play, PlayerEventSource.Sync) }
                     .onFailure { Log.e(TAG, "Could not resume the player", it) }
