@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="header_tw">AnimeUnion</string>
+    <string name="tags_label">Mostra tag Sottotitolato / Doppiato</string>
+    <string name="tags_description">Aggiunge ai poster il tag Sottotitolato, Doppiato o entrambi.</string>
+</resources>

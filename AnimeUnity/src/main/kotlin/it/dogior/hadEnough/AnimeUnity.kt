@@ -1,7 +1,9 @@
 package it.dogior.hadEnough
 
 import com.lagradost.api.Log
+import com.lagradost.cloudstream3.AnimeSearchResponse
 import com.lagradost.cloudstream3.DubStatus
+import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -12,12 +14,12 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addScore
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.ShowStatus
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.addDubStatus
 import com.lagradost.cloudstream3.addEpisodes
 import com.lagradost.cloudstream3.addPoster
-import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.mainPageOf
 import com.lagradost.cloudstream3.newAnimeLoadResponse
@@ -26,11 +28,8 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import java.util.Locale
-
-typealias Str = BooleanOrString.AsString
-//typealias Bool = BooleanOrString.AsBoolean
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.net.URLEncoder
 
 const val TAG = "AnimeUnity"
 
@@ -43,342 +42,340 @@ class AnimeUnity : MainAPI() {
 
     companion object {
         @Suppress("ConstPropertyName")
-        const val mainUrl = "https://broad-mouse-85c7.diegon7771.workers.dev"
+        const val mainUrl = "https://animeunity.cx"
         var name = "AnimeUnity"
-        var headers = mapOf(
-            "Host" to mainUrl.toHttpUrl().host,
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"
-        ).toMutableMap()
-//        var cookies = emptyMap<String, String>()
-    }
 
-    private val sectionNamesList = mainPageOf(
-        "$mainUrl/archivio/" to "In Corso",
-        "$mainUrl/archivio/" to "Popolari",
-        "$mainUrl/archivio/" to "I migliori",
-        "$mainUrl/archivio/" to "In Arrivo",
-//        "$mainUrl/archivio/" to "I migliori doppiati",
-//        "$mainUrl/archivio/" to "In Corso doppiati",
-//        "$mainUrl/archivio/" to "Popolari doppiati",
-//        "$mainUrl/archivio/" to "I migliori doppiati",
-    )
-    override val mainPage = sectionNamesList
+        private const val PAGE_SIZE = 30
+        private const val SECTION_LATEST = "latest"
 
-
-    private suspend fun setupHeadersAndCookies() {
-        val response = app.get("$mainUrl/archivio", headers = headers)
-
-        val csrfToken = response.document.head().select("meta[name=csrf-token]").attr("content")
-        val cookies =
-            "XSRF-TOKEN=${response.cookies["XSRF-TOKEN"]}; animeunity_session=${response.cookies["animeunity_session"]}"
-        val h = mapOf(
-            "X-Requested-With" to "XMLHttpRequest",
-            "Content-Type" to "application/json;charset=utf-8",
-            "X-CSRF-Token" to csrfToken,
-            "Referer" to mainUrl,
-            "Cookie" to cookies
-        )
-        headers.putAll(h)
-//        // Log.d("$TAG:setup", "Headers: $headers")
-
-    }
-
-    private fun resetHeadersAndCookies() {
-        if (headers.isNotEmpty()) {
-            headers.clear()
-        }
-        headers["Host"] = Companion.mainUrl.toHttpUrl().host
-        headers["User-Agent"] =
+        private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"
-//        cookies = emptyMap()
     }
 
-    private suspend fun searchResponseBuilder(objectList: List<Anime>): List<SearchResponse> {
-        return objectList.amap { anime ->
-            val title = (anime.titleIt ?: anime.titleEng ?: anime.title!!)
+    override val mainPage = mainPageOf(
+        SECTION_LATEST to "Ultimi Episodi",
+        "ongoing" to "In Corso",
+        "popular" to "Popolari",
+        "best" to "I migliori",
+        "upcoming" to "In Arrivo",
+    )
 
-            val poster = getImage(anime.imageUrl, anime.anilistId)
+    private suspend fun httpGet(url: String) = app.get(
+        url,
+        referer = "$mainUrl/",
+        headers = mapOf(
+            "User-Agent" to USER_AGENT,
+            "Accept-Language" to "it-IT,it;q=0.9,en;q=0.8",
+        )
+    )
 
-            newAnimeSearchResponse(
-                name = title.replace(" (ITA)", ""),
-                url = "$mainUrl/anime/${anime.id}-${anime.slug}",
-                type = when {
-                    anime.type == "TV" -> TvType.Anime
-                    anime.type == "Movie" || anime.episodesCount == 1 -> TvType.AnimeMovie
-                    else -> TvType.OVA
+    private suspend fun pageProps(url: String): AuPageProps {
+        val raw = httpGet(url).document.selectFirst("[data-page]")
+            ?.attr("data-page")
+            ?.takeIf { it.isNotBlank() }
+            ?: error("AnimeUnity: dati della pagina non trovati")
+        return parseJson<AuPageData>(raw).props
+            ?: error("AnimeUnity: props della pagina non trovate")
+    }
+
+    private fun normalizeUrl(url: String): String {
+        val path = url.toHttpUrlOrNull()?.encodedPath ?: return url
+        return if (path.startsWith("/anime/")) mainUrl + path else url
+    }
+
+    private fun parseVideoUrl(url: String): Triple<Int, String, Int>? {
+        val path = url.toHttpUrlOrNull()?.encodedPath ?: return null
+        val match = Regex("""^/anime/(\d+)-([^/]+)/(\d+)/?$""").find(path) ?: return null
+        val animeId = match.groupValues[1].toIntOrNull() ?: return null
+        val slug = match.groupValues[2]
+        val videoId = match.groupValues[3].toIntOrNull() ?: return null
+        return Triple(animeId, slug, videoId)
+    }
+
+    private fun languageLabel(language: String?): String? = when (language?.lowercase()) {
+        "ita" -> "VixCloud - Doppiato"
+        "jpn" -> "VixCloud - Sottotitolato"
+        else -> null
+    }
+
+    private fun animeTitle(anime: AuAnime): String =
+        anime.titleIt?.takeIf { it.isNotBlank() }
+            ?: anime.title?.takeIf { it.isNotBlank() }
+            ?: "AnimeUnity"
+
+    private fun animeTvType(anime: AuAnime): TvType = when (anime.type?.lowercase()) {
+        "movie" -> TvType.AnimeMovie
+        "ova", "ona", "special" -> TvType.OVA
+        else -> TvType.Anime
+    }
+
+    private fun isDubbed(anime: AuAnime): Boolean =
+        anime.variants.orEmpty().any { it.language.equals("ita", true) }
+
+    private fun isSubbed(anime: AuAnime): Boolean =
+        anime.variants.orEmpty().any { it.language.equals("jpn", true) }
+
+    private fun parseEpisodeNumber(number: String): Double? =
+        number.replace(',', '.').toDoubleOrNull()
+
+    private fun cardOf(anime: AuAnime): AnimeSearchResponse? {
+        val id = anime.id ?: return null
+        val slug = anime.slug?.takeIf { it.isNotBlank() } ?: return null
+        val title = animeTitle(anime)
+
+        return newAnimeSearchResponse(title, "$mainUrl/anime/$id-$slug", animeTvType(anime)).apply {
+            addPoster(anime.images?.poster)
+            val dubbed = isDubbed(anime)
+            val subbed = isSubbed(anime)
+            if (dubbed || subbed) {
+                addDubStatus(dubExist = dubbed, subExist = subbed)
+            }
+        }
+    }
+
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val (cards, hasNext) = try {
+            if (request.data == SECTION_LATEST) {
+                latestEpisodes(page)
+            } else {
+                archiveSection(request.data, page)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getMainPage(${request.name}): ${e.message}")
+            emptyList<SearchResponse>() to false
+        }
+
+        return newHomePageResponse(
+            HomePageList(request.name, cards, false),
+            hasNext
+        )
+    }
+
+    private suspend fun archiveSection(
+        section: String,
+        page: Int,
+    ): Pair<List<SearchResponse>, Boolean> {
+        val filter = when (section) {
+            "ongoing" -> "&status=ongoing"
+            "upcoming" -> "&status=upcoming"
+            "popular" -> "&sort_by=members"
+            "best" -> "&sort_by=score"
+            else -> ""
+        }
+        val url = "$mainUrl/api/archive?page=$page&per_page=$PAGE_SIZE$filter"
+        val result = parseJson<AuArchivePage>(httpGet(url).text)
+
+        val cards = result.data.orEmpty()
+            .distinctBy { it.id }
+            .mapNotNull { cardOf(it) }
+
+        return cards to (result.nextPageUrl != null)
+    }
+
+    private suspend fun latestEpisodes(page: Int): Pair<List<SearchResponse>, Boolean> {
+        val url = "$mainUrl/api/home/latest-episodes?page=$page"
+        val result = parseJson<AuLatestEpisodePage>(httpGet(url).text)
+
+        val cards = result.data.orEmpty()
+            .mapNotNull { it.episode?.anime }
+            .distinctBy { it.id }
+            .mapNotNull { cardOf(it) }
+
+        return cards to (result.nextPageUrl != null)
+    }
+
+    override suspend fun search(query: String): List<SearchResponse> {
+        if (query.isBlank()) return emptyList()
+
+        return try {
+            val url = "$mainUrl/api/search?q=${URLEncoder.encode(query.trim(), "UTF-8")}"
+            parseJson<AuArchivePage>(httpGet(url).text).data.orEmpty()
+                .distinctBy { it.id }
+                .mapNotNull { cardOf(it) }
+        } catch (e: Exception) {
+            Log.e(TAG, "search($query): ${e.message}")
+            emptyList()
+        }
+    }
+
+    private suspend fun loadEpisodes(animeId: Int): List<AuEpisodeDto> {
+        val episodes = mutableListOf<AuEpisodeDto>()
+        var start = 1
+
+        while (true) {
+            val url = "$mainUrl/api/anime/$animeId/episodes?start=$start"
+            val page = parseJson<AuEpisodesPage>(httpGet(url).text)
+            val batch = page.episodes.orEmpty()
+            if (batch.isEmpty()) break
+
+            episodes += batch
+            val step = page.tabSize?.takeIf { it > 0 } ?: 120
+            start += step
+            if (start > (page.total ?: 0)) break
+        }
+
+        return episodes.distinctBy { it.id }
+    }
+
+    private val episodesCache = java.util.concurrent.ConcurrentHashMap<Int, List<AuEpisodeDto>>()
+
+    private suspend fun episodesFor(animeId: Int): List<AuEpisodeDto> {
+        episodesCache[animeId]?.let { return it }
+        return loadEpisodes(animeId).also { episodesCache[animeId] = it }
+    }
+
+    private fun buildEpisodeList(
+        animeUrl: String,
+        episodes: List<AuEpisodeDto>,
+    ): List<Episode> {
+        val byNumber = LinkedHashMap<String, MutableList<AuVideo>>()
+
+        episodes.forEach { episode ->
+            val number = episode.number?.trim().orEmpty()
+            if (number.isEmpty()) return@forEach
+
+            val videos = episode.videos.orEmpty()
+                .filter { it.id != null && !it.isHidden && languageLabel(it.language) != null }
+            if (videos.isNotEmpty()) byNumber.getOrPut(number) { mutableListOf() }.addAll(videos)
+        }
+
+        return byNumber.entries
+            .sortedBy { (number, _) -> parseEpisodeNumber(number) ?: Double.MAX_VALUE }
+            .mapNotNull { (number, videos) ->
+                val video = videos.firstOrNull { it.language.equals("jpn", true) }
+                    ?: videos.firstOrNull { it.language.equals("ita", true) }
+                    ?: videos.first()
+                val videoId = video.id ?: return@mapNotNull null
+
+                newEpisode("$animeUrl/$videoId") {
+                    this.episode = number.toIntOrNull()
+                    if (this.episode == null) this.name = "Episodio $number"
                 }
-            ).apply {
-                addDubStatus(anime.dub == 1 || title.contains("(ITA)"))
-                addPoster(poster)
             }
+    }
 
+    override suspend fun load(url: String): LoadResponse {
+        val pageUrl = normalizeUrl(url)
+        val props = pageProps(pageUrl)
+        val anime = props.anime ?: error("AnimeUnity: scheda anime non trovata")
+        val animeId = anime.id ?: error("AnimeUnity: id anime mancante")
+        val animeUrl = "$mainUrl/anime/$animeId-${anime.slug.orEmpty()}"
+
+        val allEpisodes = episodesFor(animeId)
+        val episodeList = buildEpisodeList(animeUrl, allEpisodes)
+        val hasSub = allEpisodes.any { episode ->
+            episode.videos.orEmpty().any { it.language.equals("jpn", true) && !it.isHidden }
+        }
+        val hasDub = allEpisodes.any { episode ->
+            episode.videos.orEmpty().any { it.language.equals("ita", true) && !it.isHidden }
+        }
+        if (episodeList.isEmpty()) Log.w(TAG, "nessun episodio trovato per $animeUrl")
+
+        return newAnimeLoadResponse(animeTitle(anime), animeUrl, animeTvType(anime)) {
+            posterUrl = anime.images?.poster
+                ?: runCatching { anime.anilistId?.let { getAniListPoster(it) } }.getOrNull()
+            backgroundPosterUrl = anime.images?.banner
+            year = anime.year
+            plot = anime.plot
+
+            addScore(anime.score)
+            anime.episodeRuntime?.takeIf { it > 0 }?.let { addDuration("$it minuti") }
+            anime.anilistId?.takeIf { it > 0 }?.let { addAniListId(it) }
+            anime.malId?.takeIf { it > 0 }?.let { addMalId(it) }
+
+            showStatus = when (anime.defaultStatus?.lowercase()) {
+                "completed" -> ShowStatus.Completed
+                "ongoing" -> ShowStatus.Ongoing
+                else -> null
+            }
+            comingSoon = anime.defaultStatus.equals("upcoming", true)
+
+            val audioTag = when {
+                hasSub && hasDub -> "\uD83C\uDDEE\uD83C\uDDF9  Italiano / \uD83C\uDDEF\uD83C\uDDF5  Giapponese"
+                hasDub -> "\uD83C\uDDEE\uD83C\uDDF9  Italiano"
+                else -> "\uD83C\uDDEF\uD83C\uDDF5  Giapponese"
+            }
+            tags = listOf(audioTag) + anime.genres.orEmpty().mapNotNull { it.name }
+
+            if (episodeList.isNotEmpty()) addEpisodes(DubStatus.Subbed, episodeList)
+
+            recommendations = props.relatedAnimes.orEmpty()
+                .filter { it.id != animeId }
+                .distinctBy { it.id }
+                .mapNotNull { cardOf(it) }
         }
     }
 
-    private suspend fun getImage(imageUrl: String?, anilistId: Int?): String? {
-        // First try the direct image URL if available
-        if (!imageUrl.isNullOrEmpty()) {
-            try {
-                val fileName = imageUrl.substringAfterLast("/")
-                return "https://img.animeunity.co/anime/$fileName"
-            } catch (_: Exception) {
-                // Fallback to Anilist if direct image fails
-            }
-        }
-
-        // Fallback to Anilist
-
-        return anilistId?.let { getAnilistPoster(it) }
-    }
-
-    private suspend fun getAnilistPoster(anilistId: Int): String {
+    private suspend fun getAniListPoster(anilistId: Int): String? {
         val query = """
-        query (${'$'}id: Int) {
-            Media(id: ${'$'}id, type: ANIME) {
-                coverImage {
-                    large
-                    medium
+            query (${'$'}id: Int) {
+                Media(id: ${'$'}id, type: ANIME) {
+                    coverImage {
+                        large
+                        medium
+                        extraLarge
+                    }
                 }
             }
-        }
-    """.trimIndent()
+        """.trimIndent()
 
         val body = mapOf(
             "query" to query,
             "variables" to """{"id":$anilistId}"""
         )
         val response = app.post("https://graphql.anilist.co", data = body)
-        val anilistObj = parseJson<AnilistResponse>(response.text)
+        val coverImage = parseJson<AnilistResponse>(response.text).data?.media?.coverImage
 
-        return anilistObj.data.media.coverImage?.let { coverImage ->
-            coverImage.large ?: coverImage.medium!!
-        } ?: throw IllegalStateException("No valid image found")
-
+        return coverImage?.large ?: coverImage?.extraLarge ?: coverImage?.medium
     }
 
-    //Get the Homepage
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-//        val localTag = "$TAG:MainPage"
-
-        val url = request.data + "get-animes"
-        if (!headers.contains("Cookie")) {
-            resetHeadersAndCookies()
-            setupHeadersAndCookies()
-        }
-
-        val requestData = getDataPerHomeSection(request.name)
-
-        val offset = (page - 1) * 30
-        requestData.offset = offset
-
-        // Log.d(
-//            localTag,
-//            "Sezione: ${request.name} \tPage: $page \t Offset: $offset \t Request offset: ${requestData.offset}"
-//        )
-        val requestBody = requestData.toRequestBody()
-
-
-        val response =
-            app.post(url, headers = headers, requestBody = requestBody)
-
-        val body = response.text
-//        Log.d("$TAG:body", body)
-
-//        // Log.d(localTag, "Cookies: ${response.cookies}")
-        val responseObject = parseJson<ApiResponse>(body)
-        val titles = responseObject.titles
-//        // Log.d(localTag, "Titles: $titles")
-
-        val hasNextPage = requestData.offset
-            ?.let { it < 177 } ?: true && titles?.size == 30
-        return newHomePageResponse(
-            HomePageList(
-                name = request.name,
-                list = titles?.let { searchResponseBuilder(it) } ?: emptyList(),
-                isHorizontalImages = false
-            ), hasNextPage
-        )
-    }
-
-    private fun getDataPerHomeSection(section: String) = when (section) {
-        "Popolari" -> {
-            RequestData(orderBy = Str("Popolarità"), dubbed = 0)
-        }
-
-        "In Arrivo" -> {
-            RequestData(status = Str("In Uscita"), dubbed = 0)
-        }
-
-        "I migliori" -> {
-            RequestData(orderBy = Str("Valutazione"), dubbed = 0)
-        }
-
-        "In Corso" -> {
-            RequestData(orderBy = Str("Popolarità"), status = Str("In Corso"), dubbed = 0)
-        }
-
-        else -> {
-            RequestData()
-        }
-    }
-
-
-    override suspend fun search(query: String): List<SearchResponse> {
-//        val localTag = "$TAG:search"
-        val url = "$mainUrl/archivio/get-animes"
-
-        resetHeadersAndCookies()
-        setupHeadersAndCookies()
-
-        val requestBody = RequestData(title = query, dubbed = 0).toRequestBody()
-        val response =
-            app.post(url, headers = headers, requestBody = requestBody)
-
-        val responseObject = parseJson<ApiResponse>(response.text)
-        val titles = responseObject.titles
-        // Log.d(localTag, "Titles: $titles")
-
-        return searchResponseBuilder(titles ?: emptyList())
-    }
-
-    // This function gets called when you enter the page/show
-    override suspend fun load(url: String): LoadResponse {
-//        val localTag = "$TAG:load"
-        resetHeadersAndCookies()
-        setupHeadersAndCookies()
-        val animePage = app.get(url).document
-
-        val relatedAnimeJsonArray =
-            animePage.select("layout-items").attr("items-json")//.replace("\\", "")
-        val relatedAnime = parseJson<List<Anime>>(relatedAnimeJsonArray)
-
-
-        val videoPlayer = animePage.select("video-player")
-        val anime = parseJson<Anime>(videoPlayer.attr("anime"))
-
-
-        val eps = parseJson<List<Episode>>(videoPlayer.attr("episodes"))
-        val totalEps = videoPlayer.attr("episodes_count").toInt()
-        // 120 is the max number of episodes per request to the info_api endpoint
-        val isEpNumberMultipleOfRange = totalEps % 120 == 0
-        val range = if (isEpNumberMultipleOfRange) {
-            totalEps / 120
-        } else {
-            (totalEps / 120) + 1
-        }
-        val episodes = eps.map {
-            newEpisode("$url/${it.id}") {
-                this.episode = it.number.toIntOrNull()
-            }
-        }.toMutableList()
-
-        if (totalEps > 120) {
-            for (i in 2..range) {
-                val endRange = if (i == range) {
-                    totalEps
-                } else {
-                    i * 120
-                }
-
-                val infoUrl =
-                    "$mainUrl/info_api/${anime.id}/1?start_range=${1 + (i - 1) * 120}&end_range=${endRange}"
-                val info = app.get(infoUrl).text
-                val animeInfo = parseJson<AnimeInfo>(info)
-                episodes.addAll(animeInfo.episodes.map {
-                    newEpisode("$url/${it.id}") {
-                        this.episode = it.number.toIntOrNull()
-                    }
-                })
-            }
-        }
-        val title = anime.titleIt ?: anime.titleEng ?: anime.title!!
-        val relatedAnimes = relatedAnime.amap {
-            val relatedTitle = (it.titleIt ?: it.titleEng ?: it.title!!)
-            val poster = getImage(it.imageUrl, it.anilistId)
-            newAnimeSearchResponse(
-                name = relatedTitle.replace(" (ITA)", ""),
-                url = "$mainUrl/anime/${it.id}-${it.slug}",
-                type = if (it.type == "TV") TvType.Anime
-                else if (it.type == "Movie" || it.episodesCount == 1) TvType.AnimeMovie
-                else TvType.OVA
-            ) {
-                addDubStatus(it.dub == 1 || relatedTitle.contains("(ITA)"))
-                addPoster(poster)
-            }
-        }
-
-        val animeLoadResponse = newAnimeLoadResponse(
-            name = title.replace(" (ITA)", ""),
-            url = url,
-            type = if (anime.type == "TV") TvType.Anime
-            else if (anime.type == "Movie" || anime.episodesCount == 1) TvType.AnimeMovie
-            else TvType.OVA,
-        ) {
-            this.posterUrl =
-                getImage(anime.imageUrl, anime.anilistId)
-            anime.cover?.let {
-                this.backgroundPosterUrl = getBanner(it)
-            }
-            this.year = anime.date.toInt()
-            addScore(anime.score)
-
-            addDuration(anime.episodesLength.toString() + " minuti")
-            val dub = if (anime.dub == 1) DubStatus.Dubbed else DubStatus.Subbed
-            addEpisodes(dub, episodes)
-
-            addAniListId(anime.anilistId)
-            addMalId(anime.malId)
-            this.plot = anime.plot
-            val doppiato =
-                if (anime.dub == 1 || title.contains("(ITA)")) "\uD83C\uDDEE\uD83C\uDDF9  Italiano" else "\uD83C\uDDEF\uD83C\uDDF5  Giapponese"
-            this.tags = listOf(doppiato) + anime.genres.map { genre ->
-                genre.name.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(
-                        Locale.getDefault()
-                    ) else it.toString()
-                }
-            }
-            this.comingSoon = anime.status == "In uscita prossimamente"
-            this.recommendations = relatedAnimes
-        }
-
-        return animeLoadResponse
-    }
-
-    private fun getBanner(imageUrl: String): String {
-//        Log.d("$TAG:getPoster", "imageUrl: $imageUrl")
-        if (imageUrl.isNotEmpty()) {
-            try {
-                val fileName = imageUrl.substringAfterLast("/")
-                return "https://img.animeunity.co/anime/$fileName"
-            } catch (_: Exception) {
-            }
-        }
-        return imageUrl
-    }
-
-
-    // This function is how you load the links
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-//        val localTag = "$TAG:loadLinks"
-//         Log.d(localTag, "Url : $data")
+        val pageUrl = normalizeUrl(data)
+        val parsed = parseVideoUrl(pageUrl) ?: return false
+        val (animeId, slug, videoId) = parsed
+        val animeUrl = "$mainUrl/anime/$animeId-$slug"
 
-        val document = app.get(data).document
+        val videos = try {
+            episodesFor(animeId)
+                .firstOrNull { episode -> episode.videos.orEmpty().any { it.id == videoId } }
+                ?.videos.orEmpty()
+                ?.filter { it.id != null && !it.isHidden && languageLabel(it.language) != null }
+                ?.distinctBy { it.id }
+                ?: return false
+        } catch (e: Exception) {
+            Log.e(TAG, "loadLinks($pageUrl): ${e.message}")
+            return false
+        }
 
-        val sourceUrl = document.select("video-player").attr("embed_url")
-//         Log.d(localTag, "Document: $document")
-//         Log.d(localTag, "Iframe: $sourceUrl")
-        VixCloudExtractor().getUrl(
-            url = sourceUrl,
-            referer = mainUrl,
-            subtitleCallback = subtitleCallback,
-            callback = callback
-        )
-        return true
+        var found = false
+        for (video in videos) {
+            val label = languageLabel(video.language) ?: continue
+            val id = video.id ?: continue
+            val embedUrl = try {
+                pageProps("$animeUrl/$id").embedUrl?.takeIf { it.isNotBlank() }
+            } catch (e: Exception) {
+                Log.e(TAG, "embedUrl($id): ${e.message}")
+                null
+            } ?: continue
+
+            try {
+                VixCloudExtractor(label).getUrl(
+                    url = embedUrl,
+                    referer = "$mainUrl/",
+                    subtitleCallback = subtitleCallback,
+                    callback = callback
+                )
+                found = true
+            } catch (e: Exception) {
+                Log.e(TAG, "VixCloud($embedUrl): ${e.message}")
+            }
+        }
+
+        return found
     }
 }
