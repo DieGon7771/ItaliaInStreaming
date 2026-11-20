@@ -7,13 +7,20 @@ dependencies {
 }
 
 // use an integer for version numbers
-version = 11
+version = 12
 
 
 android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
+    }
+    defaultConfig {
+        val secrets = Properties()
+        val secretsFile = project.rootProject.file("secrets.properties")
+        if (secretsFile.exists()) secrets.load(secretsFile.inputStream())
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secrets.getProperty("GOOGLE_CLIENT_ID") ?: ""}\"")
+        buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secrets.getProperty("GOOGLE_CLIENT_SECRET") ?: ""}\"")
     }
 }
 

@@ -45,7 +45,12 @@ object ApiUtils {
         }
     }
 
+    fun provider(): String = getKey<String>("sync_provider")?.takeIf { it.isNotBlank() } ?: "github"
+
+    fun isDrive(): Boolean = provider() == "gdrive"
+
     fun isLoggedIn(): Boolean {
+        if (isDrive()) return GoogleDriveApi.isLoggedIn()
         val token = getKey<String>("sync_token")
         val projectNum = getKey<String>("sync_project_num")
         val projectId = getKey<String>("sync_project_id")
@@ -53,7 +58,6 @@ object ApiUtils {
         return !(token.isNullOrEmpty() || projectNum.isNullOrEmpty() || projectId.isNullOrEmpty())
     }
 
-    /** Envelope valido solo se ha un updatedAt reale e un backup non nullo. */
     private fun parseEnvelope(raw: String?): SyncEnvelope? {
         if (raw.isNullOrBlank()) return null
         return try {
@@ -64,7 +68,6 @@ object ApiUtils {
         }
     }
 
-    /** Backup nel vecchio formato (prima dell'introduzione dell'envelope). */
     private fun parseLegacyBackup(raw: String?): BackupFile? {
         if (raw.isNullOrBlank()) return null
         return try {
@@ -89,11 +92,6 @@ object ApiUtils {
         }
     }
 
-    /**
-     * Ripristina (non distruttivo) il backup dal cloud: il backup viene applicato
-     * solo se il JSON è valido e più recente dell'ultimo restore locale, senza
-     * cancellare nulla in anticipo.
-     */
     fun restoreFromDevice(context: Context?, device: SyncDevice): Boolean {
         if (context == null) return false
         try {
@@ -110,7 +108,7 @@ object ApiUtils {
                 return false
             }
             BackupUtils.restore(context, backup, true, true)
-            reconcileResumeWatching(context, backup)
+            if (BackupUtils.catEnabled(BackupUtils.CAT_RESUME, false)) reconcileResumeWatching(context, backup)
             setKey("sync_last_restore_at", if (updatedAt > 0L) updatedAt else System.currentTimeMillis())
             Log.i(TAG, "📥 restore applicato ✅ (updatedAt=$updatedAt)")
             return true
@@ -120,23 +118,12 @@ object ApiUtils {
         }
     }
 
-    /**
-     * Riconciliazione a snapshot del "Continua a guardare": dopo il restore (che
-     * è solo-merge e non elimina mai), rimuove localmente i resume item che non
-     * sono più presenti nel backup. Così le cancellazioni si propagano a tutti
-     * i dispositivi. Elimina anche le relative chiavi stagione/episodio/dub.
-     *
-     * Lavora direttamente sulle SharedPreferences (come BackupUtils) usando le
-     * stringhe delle cartelle, senza dipendere da costanti interne non esposte
-     * dall'artefatto pre-release di CloudStream su cui compila il plugin.
-     */
     private fun reconcileResumeWatching(context: Context, backup: BackupFile) {
         val resumeFolder = "result_resume_watching_2"
         val seasonFolder = "result_season"
         val episodeFolder = "result_episode"
         val dubFolder = "result_dub"
 
-        // account -> id presenti nel backup (chiavi "account/folder/id")
         val backupIdsByAccount = mutableMapOf<String, Set<Int>>()
         backup.datastore.string?.keys?.forEach { key ->
             val parts = key.split("/")
@@ -178,8 +165,6 @@ object ApiUtils {
         val projectId = res.data?.viewer?.projectV2?.id ?: return failure
         setKey("sync_project_id", projectId)
 
-        // Modello "nodo unico condiviso": tutti i dispositivi usano il nodo
-        // DraftIssue più recente del progetto come "nuvola".
         val devices: List<SyncDevice>? = fetchDevices()
         val node: SyncDevice? = devices?.firstOrNull()
         if (node != null) {
@@ -189,10 +174,8 @@ object ApiUtils {
                 restoreFromDevice(context, node)
             }
         } else if (getKey<String>("backup_device") == "true") {
-            // nessun nodo valido: lo creiamo come nuova "nuvola"
-            val backup = BackupUtils.getBackup(context, getResumeWatching())
+            val envelope = buildEnvelope(context, getResumeWatching())
                 ?: return false to "Backup non disponibile"
-            val envelope = SyncEnvelope(System.currentTimeMillis(), backup)
             val data = Base64.encodeToString(envelope.toJson().toByteArray(), Base64.URL_SAFE or Base64.NO_WRAP)
             val query = """ mutation AddProjectV2DraftIssue { addProjectV2DraftIssue( input: { projectId: "$projectId", title: "${getKey<String>("device_id")}", body: "$data" } ) { projectItem { id content { ... on DraftIssue { id } } } } } """
             val res = apiCall(query.toStringData()) ?: return failureToken
@@ -208,7 +191,42 @@ object ApiUtils {
         return true to "Dispositivo registrato correttamente"
     }
 
+    suspend fun syncDriveDetails(context: Context?): Pair<Boolean, String?> {
+        val read = GoogleDriveApi.readBackup()
+        if (!read.ok) return false to "Impossibile leggere Google Drive"
+        val content = read.content
+        if (!content.isNullOrBlank()) {
+            if (getKey<String>("restore_device") == "true") {
+                restoreFromDevice(
+                    context,
+                    SyncDevice("drive", "drive", "drive", content, envelopeUpdatedAt(content) ?: 0L)
+                )
+            }
+            return true to "Google Drive collegato"
+        }
+        if (getKey<String>("backup_device") != "true") {
+            return false to "Su Drive non c'e' ancora un backup: attiva il backup per crearlo"
+        }
+        val envelope = buildEnvelope(context, getResumeWatching())
+            ?: return false to "Backup non disponibile"
+        val result = GoogleDriveApi.writeBackup(envelope.toJson())
+        if (result.first) setKey("sync_last_restore_at", envelope.updatedAt)
+        return if (result.first) true to "Google Drive collegato" else result
+    }
+
+    suspend fun buildEnvelope(context: Context?, resume: List<com.lagradost.cloudstream3.utils.DataStoreHelper.ResumeWatchingResult>?): SyncEnvelope? {
+        val local = BackupUtils.getBackup(context, resume) ?: return null
+        val cats = BackupUtils.enabledCats()
+        var merged = local
+        if (cats.size < BackupUtils.ALL_CATS.size) {
+            val raw = fetchDevices()?.firstOrNull()?.syncedData
+            merged = BackupUtils.carryOver(local, parseEnvelope(raw)?.backup, cats)
+        }
+        return SyncEnvelope(System.currentTimeMillis(), merged, cats)
+    }
+
     suspend fun syncThisDevice(envelopeJson: String): Pair<Boolean, String?> {
+        if (isDrive()) return GoogleDriveApi.writeBackup(envelopeJson)
         val failure = false to "Error sync this device id: ${getKey<String>("device_id")}"
         if (!isLoggedIn()) return failure
         val deviceId = getKey<String>("sync_device_id")
@@ -221,13 +239,15 @@ object ApiUtils {
         return true to "Sync success"
     }
 
-    /**
-     * Ritorna la lista dei DraftIssue del progetto, difensivo: salta i nodi che
-     * non sono DraftIssue e quelli il cui body non è base64 decodificabile.
-     * Ordinati dal più recente al meno recente.
-     */
     suspend fun fetchDevices(): List<SyncDevice>? {
         if (!isLoggedIn()) return null
+        if (isDrive()) {
+            val read = GoogleDriveApi.readBackup()
+            if (!read.ok) return null
+            val raw = read.content
+            if (raw.isNullOrBlank()) return emptyList()
+            return listOf(SyncDevice("drive", "drive", "drive", raw, envelopeUpdatedAt(raw) ?: 0L))
+        }
         val projectNum = getKey<String>("sync_project_num")
         val query = """ query User { viewer { projectV2(number: ${projectNum}) { id items(first: 100) { nodes { id content { __typename ... on DraftIssue { id title bodyText updatedAt } } } } } } } """
         val res = apiCall(query.toStringData()) ?: return null

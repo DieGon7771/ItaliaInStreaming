@@ -3,6 +3,8 @@ package it.dogior.hadEnough
 import android.content.Context
 import android.content.SharedPreferences
 import com.lagradost.cloudstream3.R
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import com.lagradost.cloudstream3.utils.DataStore.getDefaultSharedPrefs
 import com.lagradost.cloudstream3.utils.DataStore.getSharedPrefs
@@ -82,12 +84,13 @@ object BackupUtils {
         "library_folder",
         "result_resume_watching_migrated",
         "jsdelivr_proxy_key",
-        //custom
         "fshare_setup",
         "fshare_token",
         "bluphim_token",
         "device_id",
         "sync_token",
+        "sync_provider",
+        "gdrive_",
         "sync_project_num",
         "sync_project_id",
         "sync_item_id",
@@ -97,10 +100,9 @@ object BackupUtils {
         "sync_last_restore_at",
         "auto_pull_enabled",
         "auto_pull_seconds",
-        "download_info",
+        "sync_cat_",
         "download_resume",
         "download_q_resume",
-        "download_episode_cache",
         "prerelease_update",
         "data_store_helper/account_key_index",
         "VERSION_NAME",
@@ -142,11 +144,88 @@ object BackupUtils {
         return check
     }
 
+    const val CAT_SETTINGS = "settings"
+    const val CAT_RESUME = "resume"
+    const val CAT_LIBRARY = "library"
+    const val CAT_SEARCH = "search"
+    const val CAT_SUBS = "subtitles"
+    const val CAT_DOWNLOADS = "downloads"
+    const val CAT_EXT = "extensions"
+    val ALL_CATS = listOf(CAT_RESUME, CAT_LIBRARY, CAT_SEARCH, CAT_SUBS, CAT_SETTINGS, CAT_DOWNLOADS, CAT_EXT)
+
+    val EXPERIMENTAL_CATS = setOf(CAT_DOWNLOADS)
+
+    fun catEnabled(cat: String, backup: Boolean): Boolean =
+        getKey<Boolean>("sync_cat_${if (backup) "b" else "r"}_$cat")
+            ?: getKey<Boolean>("sync_cat_$cat")
+            ?: (cat != CAT_DOWNLOADS)
+
+    fun setCat(cat: String, backup: Boolean, v: Boolean) =
+        setKey("sync_cat_${if (backup) "b" else "r"}_$cat", v)
+
+    fun enabledCats(backup: Boolean = true): List<String> = ALL_CATS.filter { catEnabled(it, backup) }
+
+    private val resumeMarkers = listOf(
+        "video_pos_dur", "resume_watching", "result_season", "result_dub",
+        "result_episode", "download_header_cache"
+    )
+
+    private val subsMarkers = listOf("subtitle", "subs_", "sub_")
+
+    fun catOf(key: String, isSettings: Boolean): String = when {
+        subsMarkers.any { key.contains(it, ignoreCase = true) } -> CAT_SUBS
+        isSettings -> CAT_SETTINGS
+        key.contains("download_info") || key.contains("download_episode_cache") -> CAT_DOWNLOADS
+        key.contains("REPOSITORIES_KEY") -> CAT_EXT
+        key.contains("search_history") -> CAT_SEARCH
+        resumeMarkers.any { key.contains(it) } -> CAT_RESUME
+        else -> CAT_LIBRARY
+    }
+
+    private fun filterCats(m: Map<String, Any?>, isSettings: Boolean, cats: Collection<String>) =
+        m.filter { catOf(it.key, isSettings) in cats }
+
+    private fun BackupVars.pick(f: (Map<String, Any?>) -> Map<String, Any?>): BackupVars {
+        @Suppress("UNCHECKED_CAST")
+        return BackupVars(
+            bool?.let { f(it) as Map<String, Boolean> },
+            int?.let { f(it) as Map<String, Int> },
+            string?.let { f(it) as Map<String, String> },
+            float?.let { f(it) as Map<String, Float> },
+            long?.let { f(it) as Map<String, Long> },
+            stringSet?.let { f(it) as Map<String, Set<String>?> },
+        )
+    }
+
+    private fun BackupVars.plus(o: BackupVars) = BackupVars(
+        (bool.orEmpty() + o.bool.orEmpty()),
+        (int.orEmpty() + o.int.orEmpty()),
+        (string.orEmpty() + o.string.orEmpty()),
+        (float.orEmpty() + o.float.orEmpty()),
+        (long.orEmpty() + o.long.orEmpty()),
+        (stringSet.orEmpty() + o.stringSet.orEmpty()),
+    )
+
+    fun carryOver(local: BackupFile, cloud: BackupFile?, cats: Collection<String>): BackupFile {
+        if (cloud == null) return local
+        val off = ALL_CATS.filter { it !in cats }
+        if (off.isEmpty()) return local
+        return BackupFile(
+            local.datastore.plus(cloud.datastore.pick { filterCats(it, false, off) }),
+            local.settings.plus(cloud.settings.pick { filterCats(it, true, off) })
+        )
+    }
+
     fun getBackup(context: Context?, resumeWatching: List<DataStoreHelper.ResumeWatchingResult>?): BackupFile? {
         if (context == null) return null
+        val cats = enabledCats()
 
-        val allData = context.getSharedPrefs().all.filter { it.key.isBackup(resumeWatching) }
-        val allSettings = context.getDefaultSharedPrefs().all.filter { it.key.isBackup(resumeWatching) }
+        val allData = context.getSharedPrefs().all.filter {
+            it.key.isBackup(resumeWatching) && catOf(it.key, false) in cats
+        }
+        val allSettings = context.getDefaultSharedPrefs().all.filter {
+            it.key.isBackup(resumeWatching) && catOf(it.key, true) in cats
+        }
 
         val allDataSorted = BackupVars(
             allData.filter { it.value is Boolean } as? Map<String, Boolean>,
@@ -197,6 +276,13 @@ object BackupUtils {
         restoreDataStore: Boolean
     ) {
         if (context == null) return
+        val cats = enabledCats(false)
+        val backupFile = backupFile.let { b ->
+            BackupFile(
+                b.datastore.pick { filterCats(it, false, cats) },
+                b.settings.pick { filterCats(it, true, cats) }
+            )
+        }
         if (restoreSettings) {
             context.restoreMap(backupFile.settings.bool, true)
             context.restoreMap(backupFile.settings.int, true)

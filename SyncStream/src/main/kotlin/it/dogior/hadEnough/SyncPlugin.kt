@@ -35,17 +35,12 @@ class SyncPlugin : Plugin() {
 
     private var pullCounter = 0
 
-    /**
-     * Il primo restore deve completare prima di iniziare a fare backup, altrimenti
-     * un dispositivo appena registrato potrebbe sovrascrivere il cloud con dati vuoti.
-     */
     @Volatile
     private var initialSyncDone = false
 
     @Volatile
     private var runnableStarted = false
 
-    /** Evita cicli sovrapposti quando una chiamata di rete dura più di un tick. */
     @Volatile
     private var cycleRunning = false
 
@@ -70,11 +65,6 @@ class SyncPlugin : Plugin() {
         }
     }
 
-    /**
-     * Un ciclo di polling:
-     * 1) backup dei dati locali se cambiati o se è ora del backup forzato (60s);
-     * 2) pull periodico opzionale (solo se "Aggiornamento automatico" è attivo).
-     */
     private suspend fun performCycle() {
         val currentResumeWatching = getResumeWatching()
         val changed = currentResumeWatching != lastResumeWatching
@@ -95,8 +85,7 @@ class SyncPlugin : Plugin() {
         if (getKey<String>("backup_device") != "true") return
         if (!ApiUtils.isLoggedIn()) return
         try {
-            val backup = BackupUtils.getBackup(context, getResumeWatching()) ?: return
-            val envelope = SyncEnvelope(System.currentTimeMillis(), backup)
+            val envelope = ApiUtils.buildEnvelope(context, getResumeWatching()) ?: return
             Log.i(TAG, "📤 invio backup...")
             val result = ApiUtils.syncThisDevice(envelope.toJson())
             if (result.first) {
@@ -110,11 +99,6 @@ class SyncPlugin : Plugin() {
         }
     }
 
-    /**
-     * Pull periodico opzionale: ogni `auto_pull_seconds` scarica il backup dal
-     * cloud e, se più recente del locale, lo applica (con reconcile delle
-     * cancellazioni). Attivo solo con la preferenza "Aggiornamento automatico".
-     */
     private suspend fun performPullIfEnabled() {
         if (getKey<String>("restore_device") != "true") return
         if ((getKey<Boolean>("auto_pull_enabled") ?: false) == false) return
@@ -153,10 +137,6 @@ class SyncPlugin : Plugin() {
         handler.post(runnable)
     }
 
-    /**
-     * Sincronizzazione iniziale: fetch dei nodi e restore non distruttivo del backup
-     * più recente, fuori dal main thread. Imposta initialSyncDone al termine.
-     */
     private fun performInitialSync() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -209,7 +189,6 @@ class SyncPlugin : Plugin() {
         }
     }
 
-    /** Chiamato dopo un login riuscito: sblocca i backup e avvia il polling. */
     fun onLoginCompleted() {
         initialSyncDone = true
         handler.post { ensureRunnableRunning() }

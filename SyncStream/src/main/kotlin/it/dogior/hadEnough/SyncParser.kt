@@ -16,13 +16,10 @@ data class BackupFile(
     @JsonProperty("settings") val settings: BackupVars
 )
 
-/**
- * Contenuto salvato nel draft issue (base64). "updatedAt" (epoch ms) serve a
- * decidere qual è il backup più recente ed evitare di applicare dati vecchi.
- */
 data class SyncEnvelope(
     @JsonProperty("updatedAt") val updatedAt: Long,
-    @JsonProperty("backup") val backup: BackupFile
+    @JsonProperty("backup") val backup: BackupFile,
+    @JsonProperty("categories") val categories: List<String>? = null
 )
 
 data class APIRes(
